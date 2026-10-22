@@ -11,7 +11,7 @@ const defaultAdapterResolver = (source: MediaSource): SourceAdapter => {
   if (source.protocol === 'ftp' || source.protocol === 'ftps') {
     return new FtpDirectoryAdapter();
   }
-  if (source.type === 'json_api') {
+  if (source.type === 'json-api') {
     return new JsonDirectoryAdapter();
   }
   return new HttpDirectoryAdapter();
