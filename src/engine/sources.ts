@@ -12,6 +12,8 @@ export class SourceRegistry {
     const parsed = SourceSchema.safeParse(input);
     if (!parsed.success) throw new EngineError("configuration");
     const s = parsed.data;
+    if (["__proto__", "constructor", "prototype"].includes(s.id))
+      throw new EngineError("configuration");
     if (
       cleanUrl(s.endpoint).protocol !== s.protocol + ":" ||
       (s.restricted && (!s.legalContentAttested || s.category !== "adult")) ||

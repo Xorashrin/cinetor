@@ -184,7 +184,14 @@ export class CatalogRepository {
       if (!classify(candidate, source)) throw new EngineError("unsupported");
       if (!RecordSchema.shape.sources.element.safeParse(playback).success)
         throw new EngineError("unsupported");
-      authorizedUrl(playback.url, source);
+      if (
+        playback.sourceId !== source.id ||
+        playback.season !== candidate.season ||
+        playback.episode !== candidate.episode ||
+        authorizedUrl(playback.url, source) !==
+          authorizedUrl(candidate.url, source)
+      )
+        throw new EngineError("unsupported");
       const key = identity(candidate, source),
         id = contentId(key),
         previous = records.get(id),

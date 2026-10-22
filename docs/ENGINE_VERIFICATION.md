@@ -6,7 +6,7 @@ Verification uses the repository test runner, compiler, Expo checks, native buil
 
 Automated coverage includes JSON, malformed HTML, M3U, direct metadata, Unicode paths, invalid source scope/auth, private-network opt-in, no arbitrary-host redirects, bounded reads, request/body timeout, ignored abort, simulated ISP/DNS/connectivity changes, retries/jitter/exhaustion, cache preservation, five feed boundaries, age-gated restricted source suppression, duplicate schedules, process leases, checkpoint resume, migration/corrupt cache backup recovery, mirror/edition/episode grouping, strict MP4/HLS verification and player-health resolver behavior. The HTTP integration test uses an explicitly authorized loopback server and real sockets. It is not a BDIX live-server test and uses Node's fetch as injected transport; production uses Expo's native streaming fetch.
 
-Local results: 119 tests passed, 0 failed; TypeScript passed; Expo SDK dependency check passed; Expo Doctor 20/20 passed; diff whitespace check passed.
+Local results: 121 tests passed, 0 failed; TypeScript passed; Expo SDK dependency check passed; Expo Doctor 20/20 passed; diff whitespace check passed.
 
 Validated production Hermes export and native prebuild; package com.cinator.app, version 1.0.3, versionCode 4. Final GitHub Actions verifies the tests/SDK, runs assembleRelease for arm64-v8a/armeabi-v7a/x86_64, signs the deliverable using the existing Android debug certificate and inspects manifest/package/version/signatures/bundle/architecture/hash. release-evidence.json contains the exact GITHUB_SHA. Artifact is cinetor-android-release. No private distribution signing is configured.
 

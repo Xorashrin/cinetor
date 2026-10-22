@@ -63,6 +63,7 @@ export class DiscoveryScheduler {
   private leaseUntil = 0;
   private loaded = false;
   private loadPromise: Promise<void> | null = null;
+  private persistence: Promise<void> = Promise.resolve();
   adultAccess = false;
   constructor(
     private storage: Storage,
@@ -97,14 +98,16 @@ export class DiscoveryScheduler {
     return this.loadPromise;
   }
   private save(): Promise<void> {
-    return this.storage.setItem(
-      SCAN_KEY,
-      JSON.stringify({
-        schemaVersion: 1,
-        leaseUntil: this.leaseUntil,
-        sources: this.states,
-      }),
-    );
+    const snapshot = JSON.stringify({
+      schemaVersion: 1,
+      leaseUntil: this.leaseUntil,
+      sources: this.states,
+    });
+    const operation = this.persistence
+      .catch(() => undefined)
+      .then(() => this.storage.setItem(SCAN_KEY, snapshot));
+    this.persistence = operation;
+    return operation;
   }
   cancel(): void {
     this.controller?.abort();
@@ -180,7 +183,9 @@ export class DiscoveryScheduler {
         }
       };
       // At most two independent source workers, each with one in-flight request.
-      await Promise.all([worker(), worker()]);
+      const outcomes = await Promise.allSettled([worker(), worker()]);
+      const failed = outcomes.find((result) => result.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
       this.diagnostics.update({
         state:
           this.diagnostics.value.failed > 0 &&

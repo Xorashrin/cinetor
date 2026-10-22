@@ -94,7 +94,7 @@ test("same content mirrors dedupe, distinct editions and same-name years remain 
   const e = await engine(good, [source(), source({ id: "mirror" })]);
   await e.catalog.upsert(candidate(), source(), playback(), classification);
   await e.catalog.upsert(
-    candidate(),
+    candidate({ url: "https://media.example/mirror.mp4" }),
     source({ id: "mirror" }),
     playback("mirror", "https://media.example/mirror.mp4"),
     classification,
@@ -119,7 +119,12 @@ test("episodes share series with episode-specific mirror alternatives", async ()
   const e = await engine(good);
   for (const episode of [1, 2])
     await e.catalog.upsert(
-      candidate({ kind: "series", season: 1, episode }),
+      candidate({
+        kind: "series",
+        season: 1,
+        episode,
+        url: `https://media.example/e${episode}.mp4`,
+      }),
       source(),
       playback(
         "authorized",
@@ -361,7 +366,7 @@ test("player failures prefer healthy same-content mirror; decoder evidence updat
   const e = await engine(good, [source(), source({ id: "mirror" })]);
   await e.catalog.upsert(candidate(), source(), playback(), classification);
   await e.catalog.upsert(
-    candidate(),
+    candidate({ url: "https://media.example/mirror.mp4" }),
     source({ id: "mirror" }),
     playback("mirror", "https://media.example/mirror.mp4"),
     classification,
@@ -649,4 +654,33 @@ test("failed initialization schedules recoverable foreground retry", async () =>
   await new Promise((r) => setImmediate(r));
   assert.equal(schedules, 1);
   life.stop();
+});
+test("checkpoint writes remain serialized across concurrent sources", async () => {
+  class DelayedStore extends MemoryStorage {
+    active = 0;
+    max = 0;
+    override async setItem(key: string, value: string) {
+      if (key !== SCAN_KEY) return super.setItem(key, value);
+      this.active++;
+      this.max = Math.max(this.max, this.active);
+      await new Promise((r) => setTimeout(r, 2));
+      await super.setItem(key, value);
+      this.active--;
+    }
+  }
+  const store = new DelayedStore();
+  const e = await engine(good, [source(), source({ id: "mirror" })], store);
+  await e.scheduler.run("foreground");
+  assert.equal(store.max, 1);
+  const saved = JSON.parse(store.map.get(SCAN_KEY)!);
+  assert.equal(saved.leaseUntil, 0);
+  assert.equal(saved.sources.authorized.status, "completed");
+  assert.equal(saved.sources.mirror.status, "completed");
+});
+test("prototype-sensitive source identifiers rejected", async () => {
+  const e = await engine(good);
+  for (const id of ["__proto__", "constructor", "prototype"])
+    assert.throws(() => e.registry.validate({ ...source(), id }), {
+      code: "configuration",
+    });
 });
