@@ -7,7 +7,7 @@ import { useRootNav } from '../navigation/types';
 import { colors, layout } from '../theme/tokens';
 import { Txt } from './Txt';
 
-export type HeaderAction = 'downloads' | 'search' | 'menu';
+export type HeaderAction = 'downloads' | 'search' | 'menu' | 'notifications';
 
 interface ScreenHeaderProps {
   title?: string;
@@ -40,6 +40,12 @@ export function HeaderActions({ actions, onMenu }: { actions: HeaderAction[]; on
             return (
               <Pressable key={a} hitSlop={8} onPress={onMenu}>
                 <Ionicons name="menu" size={27} color={colors.text} />
+              </Pressable>
+            );
+          case 'notifications':
+            return (
+              <Pressable key={a} hitSlop={8} onPress={() => nav.navigate('Notifications')}>
+                <Ionicons name="notifications-outline" size={24} color={colors.text} />
               </Pressable>
             );
           default:

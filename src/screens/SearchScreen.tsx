@@ -121,7 +121,7 @@ export default function SearchScreen({ navigation }: Props) {
               <Txt weight="bold" size={18} style={styles.section}>
                 Recommended TV Shows & Movies
               </Txt>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={styles.empty}>
