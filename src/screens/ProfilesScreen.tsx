@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Avatar } from '../components/Avatar';
+import { MLogo, Wordmark } from '../components/Logo';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Txt } from '../components/Txt';
 import { useRootNav } from '../navigation/types';
@@ -18,11 +19,25 @@ const PRESET_PROFILES = [
   { id: 'kids', name: 'Kids', color: '#F2C94C', kids: true },
 ];
 
-function ActionItem({ icon, label, badge, onPress }: { icon: IoniconName; label: string; badge?: number; onPress: () => void }) {
+const GITHUB_REPO_URL = 'https://github.com/Xorashrin/cinetor';
+
+function ActionItem({
+  icon,
+  label,
+  badge,
+  onPress,
+  color,
+}: {
+  icon: IoniconName;
+  label: string;
+  badge?: number;
+  onPress: () => void;
+  color?: string;
+}) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.actionRow, pressed && { backgroundColor: colors.surface2 }]}>
       <View style={styles.actionIconWrap}>
-        <Ionicons name={icon} size={20} color={colors.text} />
+        <Ionicons name={icon} size={20} color={color ?? colors.text} />
       </View>
       <Txt weight="semibold" size={15} style={{ flex: 1, marginLeft: 14 }}>
         {label}
@@ -43,6 +58,7 @@ export default function ProfilesScreen() {
   const nav = useRootNav();
   const { activeProfile, profileData, setDisplayName, resetData, showToast } = useApp();
   const [editModal, setEditModal] = useState(false);
+  const [aboutModal, setAboutModal] = useState(false);
   const [nameInput, setNameInput] = useState(activeProfile?.name ?? 'User');
 
   const myListCount = profileData.myList.length;
@@ -70,11 +86,17 @@ export default function ProfilesScreen() {
     ]);
   };
 
+  const openGitHub = () => {
+    Linking.openURL(GITHUB_REPO_URL).catch(() => {
+      showToast('Could not open GitHub link');
+    });
+  };
+
   return (
     <View style={styles.root}>
       <ScreenHeader title="Profiles & Account" actions={['search']} />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
         {/* Active Profile Header */}
         <View style={styles.activeProfileSection}>
           <Pressable onPress={() => setEditModal(true)} style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.8 }]}>
@@ -130,13 +152,57 @@ export default function ProfilesScreen() {
           <View style={styles.divider} />
           <ActionItem icon="notifications-outline" label="Notifications" onPress={() => nav.navigate('Notifications')} />
           <View style={styles.divider} />
+          <ActionItem icon="tv-outline" label="Live TV & Streams" color={colors.red} onPress={() => nav.navigate('LiveTv')} />
+          <View style={styles.divider} />
           <ActionItem icon="settings-outline" label="App Settings" onPress={() => nav.navigate('AppSettings')} />
+          <View style={styles.divider} />
+          <ActionItem icon="information-circle-outline" label="About Cinator" color={colors.blue} onPress={() => setAboutModal(true)} />
           <View style={styles.divider} />
           <ActionItem icon="trash-outline" label="Reset Local Data" onPress={handleClearData} />
         </View>
+
+        {/* Embedded About Section Card */}
+        <View style={styles.aboutCard}>
+          <View style={styles.aboutHeader}>
+            <MLogo size={32} />
+            <View style={{ marginLeft: 12 }}>
+              <Wordmark size={20} />
+              <Txt size={11} color={colors.textDim}>
+                Version 1.0.0 (Release Build)
+              </Txt>
+            </View>
+          </View>
+
+          <Txt size={13} color={colors.textMuted} lineHeight={19} style={{ marginTop: 12 }}>
+            Next-generation fast streaming client with isolated feeds for Home, Anime, K-Drama, and Live TV.
+          </Txt>
+
+          <View style={styles.creditBox}>
+            <View style={styles.creditRow}>
+              <Ionicons name="code-slash" size={16} color={colors.red} />
+              <Txt weight="bold" size={13} style={{ marginLeft: 8 }}>
+                Developed by: <Txt weight="black" color={colors.text}>Asraful Islam</Txt>
+              </Txt>
+            </View>
+            <View style={[styles.creditRow, { marginTop: 6 }]}>
+              <Ionicons name="sparkles" size={16} color={colors.blue} />
+              <Txt weight="bold" size={13} style={{ marginLeft: 8 }}>
+                Helped by: <Txt weight="black" color={colors.text}>Sazzad Hossain</Txt>
+              </Txt>
+            </View>
+          </View>
+
+          <Pressable onPress={openGitHub} style={({ pressed }) => [styles.githubBtn, pressed && { opacity: 0.8 }]}>
+            <Ionicons name="logo-github" size={18} color={colors.text} />
+            <Txt weight="bold" size={13} style={{ marginLeft: 8 }}>
+              github.com/Xorashrin/cinetor
+            </Txt>
+            <Ionicons name="open-outline" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
+          </Pressable>
+        </View>
       </ScrollView>
 
-      {/* Edit Profile Modal */}
+      {/* Edit Profile Name Modal */}
       <Modal visible={editModal} transparent animationType="fade" onRequestClose={() => setEditModal(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setEditModal(false)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
@@ -163,6 +229,64 @@ export default function ProfilesScreen() {
                 </Txt>
               </Pressable>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Full About Modal */}
+      <Modal visible={aboutModal} transparent animationType="fade" onRequestClose={() => setAboutModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setAboutModal(false)}>
+          <Pressable style={styles.aboutModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={{ alignItems: 'center' }}>
+              <MLogo size={52} />
+              <View style={{ marginTop: 12 }}>
+                <Wordmark size={28} />
+              </View>
+              <Txt size={12} color={colors.textDim} style={{ marginTop: 4 }}>
+                v1.0.0 • Production Release
+              </Txt>
+            </View>
+
+            <View style={styles.aboutDivider} />
+
+            <View style={{ gap: 10 }}>
+              <View style={styles.infoBadge}>
+                <Ionicons name="code-working-outline" size={18} color={colors.red} />
+                <View style={{ marginLeft: 10 }}>
+                  <Txt size={11} color={colors.textDim}>DEVELOPER</Txt>
+                  <Txt weight="bold" size={14}>Asraful Islam</Txt>
+                </View>
+              </View>
+
+              <View style={styles.infoBadge}>
+                <Ionicons name="heart-circle-outline" size={18} color={colors.blue} />
+                <View style={{ marginLeft: 10 }}>
+                  <Txt size={11} color={colors.textDim}>CONTRIBUTOR</Txt>
+                  <Txt weight="bold" size={14}>Sazzad Hossain</Txt>
+                </View>
+              </View>
+
+              <View style={styles.infoBadge}>
+                <Ionicons name="layers-outline" size={18} color="#FF9900" />
+                <View style={{ marginLeft: 10 }}>
+                  <Txt size={11} color={colors.textDim}>ARCHITECTURE</Txt>
+                  <Txt weight="bold" size={14}>Isolated Feeds (Home, Anime, K-Drama, Live TV)</Txt>
+                </View>
+              </View>
+            </View>
+
+            <Pressable onPress={openGitHub} style={({ pressed }) => [styles.fullGithubBtn, pressed && { opacity: 0.85 }]}>
+              <Ionicons name="logo-github" size={20} color={colors.text} />
+              <Txt weight="bold" size={14} style={{ marginLeft: 8 }}>
+                View Repository on GitHub
+              </Txt>
+            </Pressable>
+
+            <Pressable onPress={() => setAboutModal(false)} style={styles.closeBtn}>
+              <Txt weight="bold" size={14} color={colors.textMuted} align="center">
+                Close
+              </Txt>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
@@ -201,6 +325,34 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.08)',
   },
+  aboutCard: {
+    marginHorizontal: layout.gutter + 4,
+    marginTop: 20,
+    backgroundColor: colors.surface1,
+    borderRadius: radius.lg,
+    padding: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  aboutHeader: { flexDirection: 'row', alignItems: 'center' },
+  creditBox: {
+    marginTop: 14,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  creditRow: { flexDirection: 'row', alignItems: 'center' },
+  githubBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface3,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    marginTop: 14,
+  },
   actionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
   actionIconWrap: { width: 32, alignItems: 'center' },
   badge: {
@@ -211,7 +363,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.08)', marginLeft: 48 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   modalCard: {
     width: '100%',
     maxWidth: 320,
@@ -221,6 +373,33 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.15)',
   },
+  aboutModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.xl,
+    padding: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  aboutDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 18 },
+  infoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface3,
+    padding: 10,
+    borderRadius: radius.md,
+  },
+  fullGithubBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.red,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    marginTop: 20,
+  },
+  closeBtn: { paddingVertical: 12, marginTop: 4 },
   input: {
     backgroundColor: colors.surface3,
     color: colors.text,

@@ -14,6 +14,7 @@ export type RootStackParamList = {
   Title: { id: string };
   Player: { id: string; episodeId?: string };
   Live: { channelId: string; filter?: string };
+  LiveTv: undefined;
   Search: undefined;
   Categories: { current?: string; targetTab?: 'Home' | 'Anime' | 'KDrama' } | undefined;
   MyList: undefined;

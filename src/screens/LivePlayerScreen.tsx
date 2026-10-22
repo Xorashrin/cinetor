@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChannelLogo } from '../components/ChannelLogo';
 import { Txt } from '../components/Txt';
 import { filterChannels, getChannel, neighbor } from '../data/channels';
+import { getAdultChannel } from '../data/adultChannels';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, motion } from '../theme/tokens';
 
@@ -20,7 +21,7 @@ const LOAD_TIMEOUT_MS = 15000;
 
 export default function LivePlayerScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const channel = getChannel(route.params.channelId);
+  const channel = getChannel(route.params.channelId) || getAdultChannel(route.params.channelId);
   const list = useMemo(() => filterChannels(route.params.filter ?? 'All'), [route.params.filter]);
   const sources = useMemo(() => (channel ? [channel.url, ...channel.fallbacks] : []), [channel]);
   const [sourceIndex, setSourceIndex] = useState(0);

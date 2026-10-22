@@ -1,27 +1,36 @@
-"""Generate MythTube app icons (original "M" ribbon mark) as PNGs with no dependencies.
+"""Generate Cinator app icons (Cinematic "C" emblem mark) as PNGs with no dependencies.
 
-Usage: python3 -I tools/make_icons.py assets
+Usage: python3 tools/make_icons.py assets
 """
 import os
 import struct
 import sys
 import zlib
 
-# Geometry on a 1024 canvas; shared with src/components/Logo.tsx.
-BARS = [
-    [(296, 200), (408, 200), (408, 824), (296, 824)],
-    [(616, 200), (728, 200), (728, 824), (616, 824)],
+POLYS_DARK = [
+    [(240, 680), (460, 570), (840, 780), (620, 960), (180, 760)],
+    [(200, 240), (480, 420), (480, 600), (200, 780)],
 ]
-DIAGONALS = [
-    [(296, 200), (408, 200), (568, 640), (456, 640)],
-    [(616, 200), (728, 200), (568, 640), (456, 640)],
+POLYS_MAIN = [
+    [(200, 240), (480, 100), (480, 924), (200, 780)],
+    [(480, 600), (880, 820), (760, 980), (200, 780)],
 ]
-BAR_RGB = (0xB1, 0x06, 0x0F)
-DIAG_RGB = (0xE5, 0x09, 0x14)
+POLYS_GLOW = [
+    [(200, 240), (780, 60), (880, 220), (480, 420), (200, 240)],
+]
+POLYS_SHUTTER = [
+    [(480, 410), (660, 512), (480, 614)],
+]
 
+LAYERS = [
+    (POLYS_DARK, (0x7A, 0x01, 0x05)),
+    (POLYS_MAIN, (0xE5, 0x09, 0x14)),
+    (POLYS_GLOW, (0xFF, 0x33, 0x3E)),
+    (POLYS_SHUTTER, (0xFF, 0xFF, 0xFF)),
+]
 
-def fill_polygon(mask, size, poly, scale, offset):
-    pts = [(x * scale + offset, y * scale + offset) for x, y in poly]
+def fill_polygon(mask, size, poly, scale, offset_x, offset_y):
+    pts = [(x * scale + offset_x, y * scale + offset_y) for x, y in poly]
     ys = [p[1] for p in pts]
     for row in range(max(0, int(min(ys))), min(size, int(max(ys)) + 1)):
         y = row + 0.5
@@ -34,19 +43,19 @@ def fill_polygon(mask, size, poly, scale, offset):
         for a, b in zip(xs[0::2], xs[1::2]):
             start, end = max(0, int(a + 0.5)), min(size, int(b + 0.5))
             if end > start:
-                mask[row * size + start:row * size + end] = b"\x01" * (end - start)
-
+                mask[row * size + start : row * size + end] = b"\x01" * (end - start)
 
 def render(size, mark_fraction, bg, mono=False):
     ss = 2
     big = size * ss
     scale = big * mark_fraction / 1024.0
-    offset = (big - 1024 * scale) / 2.0
+    offset_x = (big - 1024 * scale) / 2.0
+    offset_y = (big - 1024 * scale) / 2.0
     layers = []
-    for polys, rgb in ((BARS, BAR_RGB), (DIAGONALS, DIAG_RGB)):
+    for polys, rgb in LAYERS:
         mask = bytearray(big * big)
         for poly in polys:
-            fill_polygon(mask, big, poly, scale, offset)
+            fill_polygon(mask, big, poly, scale, offset_x, offset_y)
         layers.append((mask, (255, 255, 255) if mono else rgb))
     out = bytearray()
     for y in range(size):
@@ -68,7 +77,6 @@ def render(size, mark_fraction, bg, mono=False):
             out += bytes((r, g, b, a))
     return bytes(out)
 
-
 def write_png(path, size, rgba):
     def chunk(tag, data):
         return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
@@ -77,22 +85,18 @@ def write_png(path, size, rgba):
     with open(path, "wb") as f:
         f.write(png)
 
-
 def main(out_dir):
-    black = (0, 0, 0, 255)
-    clear = (0, 0, 0, 0)
     jobs = [
-        ("icon.png", 1024, 0.78, black, False),
-        ("splash-icon.png", 512, 0.9, clear, False),
-        ("android-icon-foreground.png", 512, 0.52, clear, False),
-        ("android-icon-background.png", 512, 0.0, black, False),
-        ("android-icon-monochrome.png", 432, 0.6, clear, True),
-        ("favicon.png", 48, 0.85, black, False),
+        ("icon.png", 1024, 0.76, (0, 0, 0, 255), False),
+        ("splash-icon.png", 512, 0.85, (0, 0, 0, 0), False),
+        ("android-icon-foreground.png", 512, 0.52, (0, 0, 0, 0), False),
+        ("android-icon-background.png", 512, 0.0, (0, 0, 0, 255), False),
+        ("android-icon-monochrome.png", 432, 0.6, (0, 0, 0, 0), True),
+        ("favicon.png", 48, 0.82, (0, 0, 0, 255), False),
     ]
     for name, size, frac, bg, mono in jobs:
         write_png(os.path.join(out_dir, name), size, render(size, frac, bg, mono))
-        print("wrote", name)
-
+        print(f"Generated {name}")
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1] if len(sys.argv) > 1 else "assets")

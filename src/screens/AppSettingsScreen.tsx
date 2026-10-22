@@ -19,6 +19,14 @@ export default function AppSettingsScreen({ navigation }: Props) {
     <View style={styles.root}>
       <ScreenHeader title="App Settings" back />
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        <SectionLabel>Live Streaming & Channels</SectionLabel>
+        <SettingRow
+          icon="tv-outline"
+          label="Live TV & Streams"
+          value="General & 18+ Adult"
+          onPress={() => navigation.navigate('LiveTv')}
+        />
+
         <SectionLabel>Video Playback</SectionLabel>
         <SettingRow icon="cellular-outline" label="Cellular Data Usage" value="Automatic" onPress={notYet} />
         <SettingRow icon="play-forward-outline" label="Autoplay Next Episode" toggle={s.autoplayNext} onToggle={() => toggleSetting('autoplayNext')} />
