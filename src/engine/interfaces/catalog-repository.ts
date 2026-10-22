@@ -13,6 +13,7 @@ export interface CatalogQuery {
   offset?: number;
   sortBy?: 'name' | 'year' | 'discoveredAt' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';
+  verifiedOnly?: boolean;
 }
 
 /**

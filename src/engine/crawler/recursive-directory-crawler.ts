@@ -1,8 +1,21 @@
+import { FtpDirectoryAdapter } from '../adapters/ftp-directory-adapter';
+import { HttpDirectoryAdapter } from '../adapters/http-directory-adapter';
+import { JsonDirectoryAdapter } from '../adapters/json-directory-adapter';
 import type { CrawlEvent, CrawlOptions, DirectoryCrawler } from '../interfaces/directory-crawler';
 import type { RawDirectoryEntry, SourceAdapter } from '../interfaces/source-adapter';
 import type { MediaSource } from '../models/source';
 import { sanitizePath } from '../security/url-validator';
 import { Semaphore } from '../utils/concurrency';
+
+const defaultAdapterResolver = (source: MediaSource): SourceAdapter => {
+  if (source.protocol === 'ftp' || source.protocol === 'ftps') {
+    return new FtpDirectoryAdapter();
+  }
+  if (source.type === 'json_api') {
+    return new JsonDirectoryAdapter();
+  }
+  return new HttpDirectoryAdapter();
+};
 
 const DEFAULT_VIDEO_EXTENSIONS = [
   '.mp4',
@@ -42,7 +55,7 @@ export class RecursiveDirectoryCrawler implements DirectoryCrawler {
   private readonly semaphore: Semaphore;
 
   constructor(
-    adapterResolver: (source: MediaSource) => SourceAdapter,
+    adapterResolver: (source: MediaSource) => SourceAdapter = defaultAdapterResolver,
     concurrency: number = 3,
   ) {
     this.adapterResolver = adapterResolver;

@@ -38,8 +38,8 @@ export class EngineError extends Error {
     this.timestamp = Date.now();
     this.details = details;
 
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
+    if (typeof (Error as any).captureStackTrace === 'function') {
+      (Error as any).captureStackTrace(this, this.constructor);
     }
   }
 

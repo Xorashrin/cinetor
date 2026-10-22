@@ -129,7 +129,7 @@ export class PersistentCatalogRepository implements CatalogRepository {
               seasons: verifiedSeasons,
               totalSeasons: verifiedSeasons.length,
               totalEpisodes,
-            });
+            } as Series);
           }
         }
       }
@@ -398,7 +398,7 @@ export class PersistentCatalogRepository implements CatalogRepository {
             ? 'VERIFIED'
             : incoming.verificationState,
         updatedAt: now,
-      };
+      } as Movie;
     }
 
     if (isSeries(existing) && isSeries(incoming)) {
@@ -460,7 +460,7 @@ export class PersistentCatalogRepository implements CatalogRepository {
             ? 'VERIFIED'
             : incoming.verificationState,
         updatedAt: now,
-      };
+      } as Series;
     }
 
     return incoming;
