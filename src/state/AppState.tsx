@@ -3,7 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { AppState as RNAppState, type AppStateStatus } from 'react-native';
 
 import { MAIN_PROFILE_ID, PROFILE_COLOR, findEpisode, getTitle, type Profile } from '../data/mock';
-import { CatalogService } from '../engine/service/catalog-service';
+import { CatalogService, type EngineDiagnostics } from '../engine/service/catalog-service';
 import { cancelDownload, deleteLocalFile, downloadKey, downloadVideo } from '../services/downloads';
 
 export type Rating = 'down' | 'up' | 'love';
@@ -195,6 +195,7 @@ interface AppContextValue {
   activeProfile: Profile | null;
   profileData: ProfileData;
   catalogVersion: number;
+  engineDiagnostics: EngineDiagnostics;
   setDisplayName: (name: string) => void;
   signOut: () => Promise<void>;
   markCreditSeen: () => void;
@@ -210,6 +211,7 @@ interface AppContextValue {
   showToast: (message: string) => void;
   clearToast: (id: number) => void;
   refreshCatalog: () => Promise<void>;
+  addCustomSource: (name: string, baseUrl: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -218,6 +220,25 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  const [engineDiagnostics, setEngineDiagnostics] = React.useState<EngineDiagnostics>(() =>
+    CatalogService.getInstance().getDiagnosticsSync(),
+  );
+
+  useEffect(() => {
+    CatalogService.getInstance()
+      .getDiagnostics()
+      .then((d) => setEngineDiagnostics(d))
+      .catch(() => undefined);
+
+    const unsubDiag = CatalogService.getInstance().subscribeDiagnostics((d) => {
+      setEngineDiagnostics(d);
+    });
+
+    return () => {
+      unsubDiag();
+    };
+  }, []);
 
   useEffect(() => {
     let hydrated = false;
@@ -336,7 +357,22 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCatalog = useCallback(async () => {
     await CatalogService.getInstance().refresh();
+    const diag = await CatalogService.getInstance().getDiagnostics();
+    setEngineDiagnostics(diag);
     dispatch({ type: 'CATALOG_UPDATED', version: Date.now() });
+  }, []);
+
+  const addCustomSource = useCallback(async (name: string, baseUrl: string) => {
+    await CatalogService.getInstance().addCustomSource({
+      name,
+      baseUrl,
+      protocol: baseUrl.startsWith('https') ? 'https' : baseUrl.startsWith('ftp') ? 'ftp' : 'http',
+      type: 'directory-listing',
+      enabled: true,
+      priority: 5,
+    });
+    const diag = await CatalogService.getInstance().getDiagnostics();
+    setEngineDiagnostics(diag);
   }, []);
 
   const value = useMemo<AppContextValue>(() => {
@@ -346,6 +382,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       activeProfile,
       profileData: state.data,
       catalogVersion: state.catalogVersion,
+      engineDiagnostics,
       setDisplayName: (name: string) => dispatch({ type: 'SET_NAME', name }),
       signOut,
       resetData,
@@ -361,8 +398,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       showToast,
       clearToast: (id: number) => dispatch({ type: 'CLEAR_TOAST', id }),
       refreshCatalog,
+      addCustomSource,
     };
-  }, [state, startDownload, deleteDownload, resetData, signOut, showToast, refreshCatalog]);
+  }, [state, engineDiagnostics, startDownload, deleteDownload, resetData, signOut, showToast, refreshCatalog, addCustomSource]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import Animated, {
   Easing,
@@ -29,7 +29,13 @@ export default function SplashScreen({ navigation }: Props) {
   const navigateToMain = useCallback(() => {
     if (!hasNavigated.current) {
       hasNavigated.current = true;
-      navigation.replace('Main');
+      try {
+        navigation.replace('Main');
+      } catch {
+        try {
+          navigation.navigate('Main');
+        } catch {}
+      }
     }
   }, [navigation]);
 
@@ -87,8 +93,8 @@ export default function SplashScreen({ navigation }: Props) {
   });
 
   return (
-    <View style={styles.root}>
-      <Animated.View style={[styles.glow, glowStyle]}>
+    <Pressable style={styles.root} onPress={navigateToMain}>
+      <Animated.View style={[styles.glow, glowStyle]} pointerEvents="none">
         <Svg width={360} height={360}>
           <Defs>
             <RadialGradient id="cinatorGlow" cx="50%" cy="50%" r="50%">
@@ -101,7 +107,7 @@ export default function SplashScreen({ navigation }: Props) {
         </Svg>
       </Animated.View>
 
-      <Animated.View style={logoStyle}>
+      <Animated.View style={logoStyle} pointerEvents="none">
         <MLogo size={110} />
         <View style={{ marginTop: 18 }}>
           <Wordmark size={36} />
@@ -112,7 +118,7 @@ export default function SplashScreen({ navigation }: Props) {
           </Txt>
         </Animated.View>
       </Animated.View>
-    </View>
+    </Pressable>
   );
 }
 

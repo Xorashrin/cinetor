@@ -11,14 +11,17 @@ import { DarkTheme, NavigationContainer, type Theme } from '@react-navigation/na
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { Toast } from './src/components/Toast';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AppStateProvider } from './src/state/AppState';
 import { colors } from './src/theme/tokens';
 
+// Prevent native splash screen from auto-hiding before React root mounts
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const theme: Theme = {
@@ -45,42 +48,61 @@ export default function App() {
     BebasNeue_400Regular,
   });
 
-  // Failsafe font timeout: never allow font loading to permanently block app startup
-  const [fontTimeout, setFontTimeout] = useState(false);
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+  const splashDismissedRef = useRef(false);
+
+  const dismissNativeSplash = useCallback(async () => {
+    if (!splashDismissedRef.current) {
+      splashDismissedRef.current = true;
+      try {
+        await SplashScreen.hideAsync();
+      } catch {}
+    }
+  }, []);
+
+  // Failsafe font timeout: never allow font loading to block startup indefinitely
   useEffect(() => {
     const timer = setTimeout(() => {
-      setFontTimeout(true);
-    }, 1200);
+      setFontTimedOut(true);
+    }, 1000);
     return () => clearTimeout(timer);
   }, []);
 
-  const ready = loaded || !!error || fontTimeout;
+  const ready = loaded || !!error || fontTimedOut;
 
   useEffect(() => {
     if (ready) {
-      SplashScreen.hideAsync().catch(() => undefined);
+      dismissNativeSplash();
     }
-  }, [ready]);
+  }, [ready, dismissNativeSplash]);
 
-  // Top-level absolute safety timeout to hide native splash screen unconditionally
+  // Top-level absolute safety timeout: native splash MUST hide within 1800ms under any condition
   useEffect(() => {
     const timer = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => undefined);
-    }, 2500);
+      dismissNativeSplash();
+    }, 1800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [dismissNativeSplash]);
 
-  if (!ready) return null;
+  const onLayoutRootView = useCallback(async () => {
+    if (ready) {
+      await dismissNativeSplash();
+    }
+  }, [ready, dismissNativeSplash]);
 
   return (
-    <SafeAreaProvider style={{ backgroundColor: colors.bg }}>
-      <AppStateProvider>
-        <NavigationContainer theme={theme}>
-          <StatusBar style="light" />
-          <RootNavigator />
-        </NavigationContainer>
-        <Toast />
-      </AppStateProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <View style={{ flex: 1, backgroundColor: colors.bg }} onLayout={onLayoutRootView}>
+        <SafeAreaProvider style={{ backgroundColor: colors.bg }}>
+          <AppStateProvider>
+            <NavigationContainer theme={theme}>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </NavigationContainer>
+            <Toast />
+          </AppStateProvider>
+        </SafeAreaProvider>
+      </View>
+    </ErrorBoundary>
   );
 }
