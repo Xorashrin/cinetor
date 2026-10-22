@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
+import { AppState as RNAppState, type AppStateStatus } from 'react-native';
 
 import { MAIN_PROFILE_ID, PROFILE_COLOR, findEpisode, getTitle, type Profile } from '../data/mock';
+import { CatalogService } from '../engine/service/catalog-service';
 import { cancelDownload, deleteLocalFile, downloadKey, downloadVideo } from '../services/downloads';
 
 export type Rating = 'down' | 'up' | 'love';
@@ -50,6 +52,7 @@ interface State {
   data: ProfileData;
   settings: Settings;
   toast: { id: number; message: string } | null;
+  catalogVersion: number;
 }
 
 type Action =
@@ -69,7 +72,8 @@ type Action =
   | { type: 'TOGGLE_SETTING'; key: keyof Settings }
   | { type: 'RESET_DATA' }
   | { type: 'TOAST'; message: string }
-  | { type: 'CLEAR_TOAST'; id: number };
+  | { type: 'CLEAR_TOAST'; id: number }
+  | { type: 'CATALOG_UPDATED'; version: number };
 
 const STORAGE_KEY = 'cinator:v1';
 
@@ -91,6 +95,7 @@ const initialState: State = {
   data: starterData,
   settings: { wifiOnly: true, smartDownloads: true, notifications: true, autoplayNext: true, autoplayPreviews: true },
   toast: null,
+  catalogVersion: 0,
 };
 
 const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [id, ...list]);
@@ -178,6 +183,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, toast: { id: Date.now(), message: action.message } };
     case 'CLEAR_TOAST':
       return state.toast?.id === action.id ? { ...state, toast: null } : state;
+    case 'CATALOG_UPDATED':
+      return { ...state, catalogVersion: action.version };
     default:
       return state;
   }
@@ -187,6 +194,7 @@ interface AppContextValue {
   state: State;
   activeProfile: Profile | null;
   profileData: ProfileData;
+  catalogVersion: number;
   setDisplayName: (name: string) => void;
   signOut: () => Promise<void>;
   markCreditSeen: () => void;
@@ -201,6 +209,7 @@ interface AppContextValue {
   resetData: () => void;
   showToast: (message: string) => void;
   clearToast: (id: number) => void;
+  refreshCatalog: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -214,6 +223,29 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => dispatch({ type: 'HYDRATE', saved: raw ? (JSON.parse(raw) as Partial<State>) : null }))
       .catch(() => dispatch({ type: 'HYDRATE', saved: null }));
+
+    // Initialize backend catalog and sync verified titles into UI collections
+    CatalogService.getInstance()
+      .initialize()
+      .then(() => dispatch({ type: 'CATALOG_UPDATED', version: Date.now() }))
+      .catch(() => undefined);
+
+    // Listen to catalog changes (e.g. background scan, source verification updates, failover)
+    const unsubCatalog = CatalogService.getInstance().subscribe(() => {
+      dispatch({ type: 'CATALOG_UPDATED', version: Date.now() });
+    });
+
+    // Lifecycle: sync on returning to foreground
+    const subAppState = RNAppState.addEventListener('change', (nextStatus: AppStateStatus) => {
+      if (nextStatus === 'active') {
+        CatalogService.getInstance().onAppForeground().catch(() => undefined);
+      }
+    });
+
+    return () => {
+      unsubCatalog();
+      subAppState.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -276,12 +308,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'RESET_DATA' });
   }, []);
 
+  const refreshCatalog = useCallback(async () => {
+    await CatalogService.getInstance().refresh();
+    dispatch({ type: 'CATALOG_UPDATED', version: Date.now() });
+  }, []);
+
   const value = useMemo<AppContextValue>(() => {
     const activeProfile: Profile = { id: MAIN_PROFILE_ID, name: state.userName || 'Cinator User', color: PROFILE_COLOR };
     return {
       state,
       activeProfile,
       profileData: state.data,
+      catalogVersion: state.catalogVersion,
       setDisplayName: (name: string) => dispatch({ type: 'SET_NAME', name }),
       signOut,
       resetData,
@@ -296,8 +334,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleSetting: (key: keyof Settings) => dispatch({ type: 'TOGGLE_SETTING', key }),
       showToast,
       clearToast: (id: number) => dispatch({ type: 'CLEAR_TOAST', id }),
+      refreshCatalog,
     };
-  }, [state, startDownload, deleteDownload, resetData, signOut, showToast]);
+  }, [state, startDownload, deleteDownload, resetData, signOut, showToast, refreshCatalog]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

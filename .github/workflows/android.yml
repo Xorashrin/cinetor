@@ -27,17 +27,20 @@ jobs:
       - name: Align native module versions with the Expo SDK
         run: npx expo install --fix
 
+      - name: Run engine unit and integration tests
+        run: npm run test:engine
+
       - name: Type check
         run: npx tsc --noEmit
 
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Build release APK (arm64)
+      - name: Build Android debug APK (arm64)
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
 
       - uses: actions/upload-artifact@v5
         with:
-          name: cinator-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: android-apk
+          path: android/app/build/outputs/apk/debug/*.apk

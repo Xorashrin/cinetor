@@ -22,7 +22,7 @@ const KDRAMA_FILTERS = ['All', 'Romance', 'Thriller', 'Mystery', 'Comedy', 'Dram
 export default function KDramaScreen({ route, navigation }: Props) {
   const nav = useRootNav();
   const insets = useSafeAreaInsets();
-  const { profileData, toggleMyList, showToast } = useApp();
+  const { profileData, toggleMyList, showToast, catalogVersion } = useApp();
   const [selectedFilter, setSelectedFilter] = useState('All');
   const genre = route.params?.genre;
 
@@ -44,7 +44,7 @@ export default function KDramaScreen({ route, navigation }: Props) {
       if (selectedFilter === 'All') return isKDrama;
       return isKDrama && t.genres.includes(selectedFilter);
     });
-  }, [selectedFilter]);
+  }, [selectedFilter, catalogVersion]);
 
   const openTitle = useCallback((t: Title) => nav.navigate('Title', { id: t.id }), [nav]);
 

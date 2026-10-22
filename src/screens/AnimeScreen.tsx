@@ -22,7 +22,7 @@ const ANIME_FILTERS = ['All', 'Action', 'Shonen', 'Fantasy', 'Romance', 'Sci-Fi'
 export default function AnimeScreen({ route, navigation }: Props) {
   const nav = useRootNav();
   const insets = useSafeAreaInsets();
-  const { profileData, toggleMyList, showToast } = useApp();
+  const { profileData, toggleMyList, showToast, catalogVersion } = useApp();
   const [selectedFilter, setSelectedFilter] = useState('All');
   const genre = route.params?.genre;
 
@@ -44,7 +44,7 @@ export default function AnimeScreen({ route, navigation }: Props) {
       if (selectedFilter === 'All') return isAnime;
       return isAnime && t.genres.includes(selectedFilter);
     });
-  }, [selectedFilter]);
+  }, [selectedFilter, catalogVersion]);
 
   const openTitle = useCallback((t: Title) => nav.navigate('Title', { id: t.id }), [nav]);
 

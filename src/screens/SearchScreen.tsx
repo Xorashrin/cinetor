@@ -17,29 +17,33 @@ import { colors, font, radius } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Search'>;
 
-// Pre-built lowercase index so each keystroke is a cheap string scan.
-const INDEX = AVAILABLE.map((t) => ({
-  title: t,
-  haystack: [t.name, ...t.genres, ...t.cast, ...t.moods, ...t.creators].join('|').toLowerCase(),
-}));
-
-function search(query: string): Title[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  const terms = q.split(/\s+/).filter(Boolean);
-  return INDEX.filter((e) => terms.every((term) => e.haystack.includes(term)))
-    .sort((a, b) => Number(b.title.name.toLowerCase().startsWith(q)) - Number(a.title.name.toLowerCase().startsWith(q)))
-    .map((e) => e.title);
-}
-
 export default function SearchScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { showToast } = useApp();
+  const { showToast, catalogVersion } = useApp();
   const [query, setQuery] = useState('');
   // Typing stays responsive; result rendering runs at a lower priority.
   const deferred = useDeferredValue(query);
-  const results = useMemo(() => search(deferred), [deferred]);
+
+  const index = useMemo(
+    () =>
+      AVAILABLE.map((t) => ({
+        title: t,
+        haystack: [t.name, ...t.genres, ...t.cast, ...t.moods, ...t.creators].join('|').toLowerCase(),
+      })),
+    [catalogVersion],
+  );
+
+  const results = useMemo(() => {
+    const q = deferred.trim().toLowerCase();
+    if (!q) return [];
+    const terms = q.split(/\s+/).filter(Boolean);
+    return index
+      .filter((e) => terms.every((term) => e.haystack.includes(term)))
+      .sort((a, b) => Number(b.title.name.toLowerCase().startsWith(q)) - Number(a.title.name.toLowerCase().startsWith(q)))
+      .map((e) => e.title);
+  }, [deferred, index]);
+
   const channels = useMemo(() => searchChannels(deferred, 12), [deferred]);
   const hasQuery = deferred.trim().length > 0;
   const cell = Math.floor((width - 24 - 16) / 3);
@@ -56,7 +60,7 @@ export default function SearchScreen({ navigation }: Props) {
     ({ item }) => (
       <Pressable onPress={() => open(item)} style={({ pressed }) => [styles.recRow, pressed ? { backgroundColor: colors.surface2 } : null]}>
         <View style={styles.recThumb}>
-          <Image source={img.backdrop(item.seed)} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" recyclingKey={item.id} />
+          <Image source={item.backdropUrl ? { uri: item.backdropUrl } : item.posterUrl ? { uri: item.posterUrl } : img.backdrop(item.seed)} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" recyclingKey={item.id} />
         </View>
         <Txt weight="medium" size={14} numberOfLines={2} style={styles.recTitle}>
           {item.name}

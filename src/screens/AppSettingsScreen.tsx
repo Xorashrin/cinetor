@@ -11,7 +11,7 @@ import { colors } from '../theme/tokens';
 type Props = NativeStackScreenProps<RootStackParamList, 'AppSettings'>;
 
 export default function AppSettingsScreen({ navigation }: Props) {
-  const { state, toggleSetting, showToast, profileData, deleteDownload, signOut } = useApp();
+  const { state, toggleSetting, showToast, profileData, deleteDownload, signOut, refreshCatalog } = useApp();
   const s = state.settings;
   const notYet = () => showToast('This setting is visual-only in this build');
 
@@ -66,6 +66,16 @@ export default function AppSettingsScreen({ navigation }: Props) {
 
         <SectionLabel>Diagnostics</SectionLabel>
         <SettingRow icon="speedometer-outline" label="Check Network" onPress={() => showToast('Network check successful.')} />
+        <SettingRow
+          icon="sync-outline"
+          label="Synchronize Catalog"
+          description="Re-verify active media sources and update catalog"
+          onPress={async () => {
+            showToast('Re-verifying catalog sources...');
+            await refreshCatalog();
+            showToast('Catalog updated');
+          }}
+        />
         <SettingRow icon="information-circle-outline" label="Playback Specification" onPress={notYet} />
 
         <SectionLabel>About</SectionLabel>

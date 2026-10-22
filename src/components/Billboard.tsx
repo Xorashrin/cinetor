@@ -24,7 +24,7 @@ export const Billboard = memo(function Billboard({ title, inMyList, onPlay, onTo
   const height = Math.round(width * 1.42);
   return (
     <Pressable onPress={onOpen} style={[styles.card, { width, height }]}>
-      <Image source={img.hero(title.seed)} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} cachePolicy="memory-disk" />
+      <Image source={title.backdropUrl ? { uri: title.backdropUrl } : title.posterUrl ? { uri: title.posterUrl } : img.hero(title.seed)} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} cachePolicy="memory-disk" />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.92)']} locations={[0.4, 0.62, 1]} style={StyleSheet.absoluteFill} />
       <View style={styles.content}>
         {title.original ? (

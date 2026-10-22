@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Txt } from '../components/Txt';
 import { img } from '../data/images';
 import { findEpisode, getTitle, nextEpisode } from '../data/mock';
+import { CatalogService } from '../engine/service/catalog-service';
 import type { RootStackParamList } from '../navigation/types';
 import { downloadFor, useApp } from '../state/AppState';
 import { colors, motion } from '../theme/tokens';
@@ -117,8 +118,41 @@ export default function PlayerScreen({ navigation, route }: Props) {
   const [audio, setAudio] = useState(AUDIO[0]);
   const [subtitle, setSubtitle] = useState(SUBTITLES[0]);
   const [seekHint, setSeekHint] = useState<'back' | 'forward' | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const currentUrlRef = useRef(source);
+  const failedUrlsRef = useRef<Set<string>>(new Set());
+  const isFailingOverRef = useRef(false);
   const latest = useRef({ position: 0, duration: 0 });
   const lastTap = useRef<{ side: 'left' | 'right'; at: number } | null>(null);
+
+  useEffect(() => {
+    if (status === 'error' && !isFailingOverRef.current) {
+      isFailingOverRef.current = true;
+      const failedUrl = currentUrlRef.current;
+      failedUrlsRef.current.add(failedUrl);
+
+      // Attempt verified multi-source failover on the same item/episode
+      CatalogService.getInstance()
+        .failoverSource(title.id, failedUrl, episode?.id)
+        .then((nextMirrorUrl) => {
+          if (nextMirrorUrl && !failedUrlsRef.current.has(nextMirrorUrl)) {
+            showToast('Switching to alternative verified playback mirror...');
+            currentUrlRef.current = nextMirrorUrl;
+            player.replace(nextMirrorUrl);
+            player.play();
+            isFailingOverRef.current = false;
+          } else {
+            // Exhausted all verified mirrors for this item
+            setPlaybackError('Unable to play title. All verified playback sources are currently unavailable.');
+            isFailingOverRef.current = false;
+          }
+        })
+        .catch(() => {
+          setPlaybackError('Playback error occurred. No alternative source available.');
+          isFailingOverRef.current = false;
+        });
+    }
+  }, [status, title.id, episode?.id, player, showToast]);
 
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     setPosition(currentTime);
@@ -370,12 +404,46 @@ export default function PlayerScreen({ navigation, route }: Props) {
           ) : null}
         </View>
       ) : null}
+
+      {playbackError ? (
+        <View style={styles.errorOverlay}>
+          <Ionicons name="alert-circle-outline" size={54} color={colors.red} />
+          <Txt weight="bold" size={18} align="center" style={{ marginTop: 16 }}>
+            Playback Error
+          </Txt>
+          <Txt size={14} color={colors.textDim} align="center" style={{ marginTop: 8, maxWidth: 360, lineHeight: 20 }}>
+            {playbackError}
+          </Txt>
+          <Pressable onPress={() => navigation.goBack()} style={styles.errorButton}>
+            <Txt weight="bold" size={14}>
+              Go Back
+            </Txt>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000000' },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    zIndex: 100,
+  },
+  errorButton: {
+    marginTop: 24,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    backgroundColor: colors.surface2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
   tapZones: { flex: 1, flexDirection: 'row' },
   center: { position: 'absolute', alignSelf: 'center', top: '45%' },
   dim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },

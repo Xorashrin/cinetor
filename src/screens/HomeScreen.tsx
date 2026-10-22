@@ -25,7 +25,7 @@ type HomeFilter = 'all' | 'tv' | 'movies';
 export default function HomeScreen({ route, navigation }: Props) {
   const nav = useRootNav();
   const insets = useSafeAreaInsets();
-  const { activeProfile, profileData, toggleMyList, rate, removeProgress, showToast } = useApp();
+  const { activeProfile, profileData, toggleMyList, rate, removeProgress, showToast, catalogVersion } = useApp();
   const [filter, setFilter] = useState<HomeFilter>('all');
   const [menuItem, setMenuItem] = useState<ContinueItem | null>(null);
   const genre = route.params?.genre;
@@ -50,7 +50,7 @@ export default function HomeScreen({ route, navigation }: Props) {
       AVAILABLE.filter(
         (t) => (filter === 'all' || (filter === 'tv' ? t.kind === 'series' : t.kind === 'movie')) && (!genre || t.genres.includes(genre)),
       ),
-    [filter, genre],
+    [filter, genre, catalogVersion],
   );
 
   const hero = pool[0];

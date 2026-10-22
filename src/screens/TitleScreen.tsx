@@ -156,7 +156,7 @@ export default function TitleScreen({ navigation, route }: Props) {
     <View style={styles.root}>
       <View style={{ paddingTop: insets.top, backgroundColor: colors.bg }}>
         <Pressable onPress={() => play(target?.episode.id)} style={{ width, height: (width * 9) / 16 }}>
-          <Image source={img.backdrop(title.seed)} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+          <Image source={title.backdropUrl ? { uri: title.backdropUrl } : title.posterUrl ? { uri: title.posterUrl } : img.backdrop(title.seed)} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} cachePolicy="memory-disk" />
           <LinearGradient colors={['rgba(0,0,0,0.35)', 'transparent', 'rgba(0,0,0,0.5)']} style={StyleSheet.absoluteFill} />
           <View style={styles.heroPlay}>
             <Ionicons name="play" size={30} color={colors.text} style={{ marginLeft: 4 }} />
