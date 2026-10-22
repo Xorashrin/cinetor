@@ -39,6 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+*.apk
+builds/
 
 # local-only
 docs/rea-evidence/*.txt
