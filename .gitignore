@@ -44,3 +44,6 @@ builds/
 
 # local-only
 docs/rea-evidence/*.txt
+
+# Generated Python tooling bytecode
+__pycache__/

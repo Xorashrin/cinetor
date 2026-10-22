@@ -181,7 +181,7 @@ export default function TitleScreen({ navigation, route }: Props) {
             {title.name}
           </Txt>
           <View style={styles.meta}>
-            <Txt size={13} color={colors.textMuted}>{title.year}</Txt>
+            {title.year > 0 ? <Txt size={13} color={colors.textMuted}>{title.year}</Txt> : null}
             <View style={styles.maturity}>
               <Txt weight="semibold" size={11}>{title.maturity}</Txt>
             </View>

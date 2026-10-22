@@ -1,28 +1,20 @@
-# Cinator
+# Cinetor
 
-A Netflix-style streaming app UI for Android (React Native + Expo SDK 58), completely clean and blank without mock data or external APIs.
+Android streaming application using Expo SDK 58, React Native 0.88, Hermes and expo-video.
 
-## Tabs
-- **Home**: Curated main entertainment view.
-- **Anime**: Dedicated anime section with category filters (Shonen, Action, Fantasy, Romance, Sci-Fi).
-- **K-Drama**: Dedicated Korean drama section with filters (Romance, Thriller, Mystery, Comedy, Drama).
-- **Profiles**: Profile switcher, avatar management, My List, Downloads, and App Settings.
+Home, Anime, K-Drama, Live TV and the age-gated Adult section consume the shared persistent catalog. Discovery starts after essential initialization and never gates first render. No parser/server tab exists.
 
-## Build (GitHub Actions)
+The source registry starts empty. Configure authorized endpoints using [SOURCE_CONFIGURATION.md](docs/SOURCE_CONFIGURATION.md). Protocol support, verification limits, secrets provisioning and Android scheduling constraints are documented there. See [ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md) for the removal investigation and module design.
 
-1. Pushing to `main` automatically triggers the `.github/workflows/android.yml` action.
-2. In your GitHub repository, open **Actions → Android APK**.
-3. When the build finishes, download the `cinator-apk` artifact.
-4. Install the release APK on your Android device.
-
-## Project Layout
-
+```sh
+npm ci
+npm run typecheck
+npm test
+npx expo install --check
+npx expo-doctor
+npm run prebuild:android
+cd android
+./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64
 ```
-App.tsx                 Fonts, splash, providers, navigation container
-src/theme/tokens.ts     Colors, spacing, typography, motion tokens
-src/data/               Data structures and types
-src/state/AppState.tsx  App state + AsyncStorage persistence
-src/navigation/         Root stack + bottom tabs (Home, Anime, K-Drama, Profiles)
-src/components/         Shared UI components
-src/screens/            Individual screen components
-```
+
+Pushing main triggers [Android APK](../../actions/workflows/android.yml). The `cinetor-android-release` artifact contains the real release variant APK, SHA256SUMS and commit-bound inspected metadata. Version 1.0.3 (4), package `com.cinator.app`. Current signing uses Android's development certificate; private distribution signing is not configured. Device and real BDIX-source runtime results require actual devices and authorized source configuration; unit fixtures do not establish them.

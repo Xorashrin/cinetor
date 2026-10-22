@@ -6,6 +6,7 @@ import { SectionLabel, SettingRow } from '../components/ListItems';
 import { ScreenHeader } from '../components/ScreenHeader';
 import type { RootStackParamList } from '../navigation/types';
 import { useApp } from '../state/AppState';
+import { DiagnosticsView } from '../engine/DiagnosticsView';
 import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AppSettings'>;
@@ -72,11 +73,12 @@ export default function AppSettingsScreen({ navigation }: Props) {
           }
         />
 
+        {__DEV__ ? <DiagnosticsView /> : null}
         <SectionLabel>About & Legal</SectionLabel>
         <SettingRow
           icon="information-circle-outline"
           label="About Cinator"
-          value="v1.0.2 (Release)"
+          value="v1.0.3 (Release)"
           onPress={() => navigation.navigate('About')}
         />
         <SettingRow icon="document-text-outline" label="Open Source Licenses" onPress={() => navigation.navigate('About')} />

@@ -1,3 +1,4 @@
+import './src/engine/background';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

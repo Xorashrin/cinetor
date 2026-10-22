@@ -1,44 +1,112 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEvent, useEventListener } from 'expo';
-import { StatusBar } from 'expo-status-bar';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useEvent, useEventListener } from "expo";
+import { StatusBar } from "expo-status-bar";
+import { useVideoPlayer, VideoView } from "expo-video";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ChannelLogo } from '../components/ChannelLogo';
-import { Txt } from '../components/Txt';
-import { filterChannels, getChannel, neighbor } from '../data/channels';
-import { getAdultChannel } from '../data/adultChannels';
-import type { RootStackParamList } from '../navigation/types';
-import { colors, motion } from '../theme/tokens';
+import { ChannelLogo } from "../components/ChannelLogo";
+import { Txt } from "../components/Txt";
+import { filterChannels, getChannel, neighbor } from "../data/channels";
+import { getAdultChannel } from "../data/adultChannels";
+import type { RootStackParamList } from "../navigation/types";
+import {
+  catalog,
+  resolver,
+  scheduler,
+  playbackSource,
+} from "../engine/runtime";
+import { colors, motion } from "../theme/tokens";
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Live'>;
+type Props = NativeStackScreenProps<RootStackParamList, "Live">;
 
 const LOAD_TIMEOUT_MS = 15000;
 
 export default function LivePlayerScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const channel = getChannel(route.params.channelId) || getAdultChannel(route.params.channelId);
-  const list = useMemo(() => filterChannels(route.params.filter ?? 'All'), [route.params.filter]);
-  const sources = useMemo(() => (channel ? [channel.url, ...channel.fallbacks] : []), [channel]);
+  const channel =
+    getChannel(route.params.channelId) ||
+    getAdultChannel(route.params.channelId);
+  const list = useMemo(
+    () =>
+      channel && getAdultChannel(channel.id)
+        ? []
+        : filterChannels(route.params.filter ?? "All"),
+    [route.params.filter, channel],
+  );
+  const sources = useMemo(
+    () =>
+      channel
+        ? resolver.alternatives(
+            channel.id,
+            undefined,
+            undefined,
+            new Set(),
+            scheduler.adultAccess,
+          )
+        : [],
+    [route.params.channelId],
+  );
+  const sourceUrls = sources.map((source) => source.url).join("|");
   const [sourceIndex, setSourceIndex] = useState(0);
   const [failed, setFailed] = useState(false);
   const [visible, setVisible] = useState(true);
   const advancing = useRef(false);
 
-  const player = useVideoPlayer(sources[0] ?? null, (p) => {
+  const player = useVideoPlayer(null, (p) => {
+    p.timeUpdateEventInterval = 1;
     p.play();
   });
-  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
-  const { status } = useEvent(player, 'statusChange', { status: player.status });
+  const { isPlaying } = useEvent(player, "playingChange", {
+    isPlaying: player.playing,
+  });
+  const { status } = useEvent(player, "statusChange", {
+    status: player.status,
+  });
 
   // A source that errors (or never becomes ready) falls through to the next working source.
   const indexRef = useRef(0);
+  const decoded = useRef(new Set<string>());
+  useEffect(() => {
+    const first = sources[0];
+    if (!first) {
+      setFailed(true);
+      return;
+    }
+    void playbackSource(first.url, first.sourceId)
+      .then((ref) => player.replaceAsync(ref))
+      .then(() => player.play())
+      .catch(() => setFailed(true));
+  }, [sourceUrls, player]);
+  useEventListener(player, "timeUpdate", ({ currentTime }) => {
+    const source = sources[indexRef.current];
+    if (
+      channel &&
+      source &&
+      currentTime > 0 &&
+      player.playing &&
+      !decoded.current.has(source.url)
+    ) {
+      decoded.current.add(source.url);
+      void catalog
+        .reportPlayback(channel.id, source.url, true)
+        .catch(() => undefined);
+    }
+  });
   const tryNextSource = () => {
     if (advancing.current || failed) return;
+    const failedSource = sources[indexRef.current];
+    if (channel && failedSource)
+      void catalog
+        .reportPlayback(channel.id, failedSource.url, false)
+        .catch(() => undefined);
     const next = indexRef.current + 1;
     if (next >= sources.length) {
       setFailed(true);
@@ -47,21 +115,21 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
     advancing.current = true;
     indexRef.current = next;
     setSourceIndex(next);
-    player
-      .replaceAsync(sources[next])
+    playbackSource(sources[next].url, sources[next].sourceId)
+      .then((ref) => player.replaceAsync(ref))
       .then(() => player.play())
-      .catch(() => undefined)
+      .catch(() => setFailed(true))
       .finally(() => {
         advancing.current = false;
       });
   };
 
-  useEventListener(player, 'statusChange', ({ status: s }) => {
-    if (s === 'error') tryNextSource();
+  useEventListener(player, "statusChange", ({ status: s }) => {
+    if (s === "error") tryNextSource();
   });
 
   useEffect(() => {
-    if (status === 'readyToPlay' || failed) return;
+    if (status === "readyToPlay" || failed) return;
     const timer = setTimeout(tryNextSource, LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
     // tryNextSource reads the latest state through setState; re-arm only when the source changes.
@@ -83,7 +151,11 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
   const zap = (step: 1 | -1) => {
     if (!channel) return;
     const next = neighbor(list, channel.id, step);
-    if (next) navigation.replace('Live', { channelId: next.id, filter: route.params.filter });
+    if (next)
+      navigation.replace("Live", {
+        channelId: next.id,
+        filter: route.params.filter,
+      });
   };
 
   if (!channel) {
@@ -97,12 +169,24 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
   return (
     <View style={styles.root}>
       <StatusBar hidden />
-      <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="contain" nativeControls={false} />
-      <Pressable style={StyleSheet.absoluteFill} onPress={() => setVisible((v) => !v)} />
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFill}
+        contentFit="contain"
+        nativeControls={false}
+      />
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={() => setVisible((v) => !v)}
+      />
 
       {failed ? (
         <View style={[StyleSheet.absoluteFill, styles.center, styles.dim]}>
-          <MaterialCommunityIcons name="television-off" size={48} color={colors.textMuted} />
+          <MaterialCommunityIcons
+            name="television-off"
+            size={48}
+            color={colors.textMuted}
+          />
           <Txt weight="bold" size={18} style={{ marginTop: 12 }}>
             {channel.name} is offline right now
           </Txt>
@@ -115,21 +199,42 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
                 Next Channel
               </Txt>
             </Pressable>
-            <Pressable onPress={() => navigation.goBack()} style={[styles.failButton, styles.failGhost]}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              style={[styles.failButton, styles.failGhost]}
+            >
               <Txt weight="bold" size={14}>
                 Back
               </Txt>
             </Pressable>
           </View>
         </View>
-      ) : status !== 'readyToPlay' ? (
-        <ActivityIndicator size="large" color={colors.red} style={styles.spinner} />
+      ) : status !== "readyToPlay" ? (
+        <ActivityIndicator
+          size="large"
+          color={colors.red}
+          style={styles.spinner}
+        />
       ) : null}
 
       {!failed ? (
-        <Animated.View pointerEvents={visible ? 'box-none' : 'none'} style={[StyleSheet.absoluteFill, controlsStyle]}>
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.dim]} />
-          <View style={[styles.top, { paddingLeft: insets.left + 20, paddingRight: insets.right + 20 }]}>
+        <Animated.View
+          pointerEvents={visible ? "box-none" : "none"}
+          style={[StyleSheet.absoluteFill, controlsStyle]}
+        >
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.dim]}
+          />
+          <View
+            style={[
+              styles.top,
+              {
+                paddingLeft: insets.left + 20,
+                paddingRight: insets.right + 20,
+              },
+            ]}
+          >
             <Pressable hitSlop={12} onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={28} color={colors.text} />
             </Pressable>
@@ -141,7 +246,7 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
                 </Txt>
                 <Txt size={12} color={colors.textMuted} numberOfLines={1}>
                   {channel.category} • {channel.country}
-                  {channel.quality ? ` • ${channel.quality}` : ''}
+                  {channel.quality ? ` • ${channel.quality}` : ""}
                 </Txt>
               </View>
             </View>
@@ -155,13 +260,29 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
 
           <View style={styles.centerControls} pointerEvents="box-none">
             <Pressable hitSlop={16} onPress={() => zap(-1)}>
-              <MaterialCommunityIcons name="skip-previous" size={46} color={colors.text} />
+              <MaterialCommunityIcons
+                name="skip-previous"
+                size={46}
+                color={colors.text}
+              />
             </Pressable>
-            <Pressable hitSlop={16} onPress={() => (isPlaying ? player.pause() : player.play())} style={{ marginHorizontal: 70 }}>
-              <Ionicons name={isPlaying ? 'pause' : 'play'} size={64} color={colors.text} />
+            <Pressable
+              hitSlop={16}
+              onPress={() => (isPlaying ? player.pause() : player.play())}
+              style={{ marginHorizontal: 70 }}
+            >
+              <Ionicons
+                name={isPlaying ? "pause" : "play"}
+                size={64}
+                color={colors.text}
+              />
             </Pressable>
             <Pressable hitSlop={16} onPress={() => zap(1)}>
-              <MaterialCommunityIcons name="skip-next" size={46} color={colors.text} />
+              <MaterialCommunityIcons
+                name="skip-next"
+                size={46}
+                color={colors.text}
+              />
             </Pressable>
           </View>
         </Animated.View>
@@ -171,16 +292,48 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000000' },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  dim: { backgroundColor: 'rgba(0,0,0,0.5)' },
-  spinner: { position: 'absolute', alignSelf: 'center', top: '45%' },
-  top: { flexDirection: 'row', alignItems: 'center', paddingTop: 20 },
-  titleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', marginHorizontal: 18 },
-  livePill: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.red, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5 },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.text, marginRight: 6 },
-  centerControls: { ...StyleSheet.absoluteFill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  failActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  failButton: { backgroundColor: colors.text, borderRadius: 4, paddingHorizontal: 20, paddingVertical: 10 },
-  failGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.text },
+  root: { flex: 1, backgroundColor: "#000000" },
+  center: { alignItems: "center", justifyContent: "center" },
+  dim: { backgroundColor: "rgba(0,0,0,0.5)" },
+  spinner: { position: "absolute", alignSelf: "center", top: "45%" },
+  top: { flexDirection: "row", alignItems: "center", paddingTop: 20 },
+  titleWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 18,
+  },
+  livePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.red,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.text,
+    marginRight: 6,
+  },
+  centerControls: {
+    ...StyleSheet.absoluteFill,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  failActions: { flexDirection: "row", gap: 12, marginTop: 20 },
+  failButton: {
+    backgroundColor: colors.text,
+    borderRadius: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  failGhost: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.text,
+  },
 });

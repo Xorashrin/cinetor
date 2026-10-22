@@ -44,7 +44,7 @@ export default function SearchScreen({ navigation }: Props) {
       .map((e) => e.title);
   }, [deferred, index]);
 
-  const channels = useMemo(() => searchChannels(deferred, 12), [deferred]);
+  const channels = useMemo(() => searchChannels(deferred, 12), [deferred, catalogVersion]);
   const hasQuery = deferred.trim().length > 0;
   const cell = Math.floor((width - 24 - 16) / 3);
 

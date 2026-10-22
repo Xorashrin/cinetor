@@ -8,120 +8,72 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: cinetor-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-
+          cache: npm
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Align native module versions with the Expo SDK
-        run: npx expo install --fix
-
-      - name: Type check
-        run: npx tsc --noEmit
-
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify engine and SDK compatibility
+        run: |
+          npm run typecheck
+          npm test
+          npx expo install --check
+          npx expo-doctor
       - name: Generate Android project
-        run: npx expo prebuild --platform android --clean --no-install
-
-      - name: Build Android universal release APK (arm64, armv7, x86_64)
+        run: npm run prebuild:android
+      - name: Build universal Android release variant
         working-directory: android
         run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64 --no-daemon
-
-      - name: Verify and Sign Release APK Deliverable
+      - name: Sign and inspect release deliverable
         run: |
-          APK_FILE=$(find android/app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
-          if [ -z "$APK_FILE" ]; then
-            echo "::error::Release APK file not found under android/app/build/outputs/apk/release!"
-            exit 1
-          fi
-          echo "Found Release APK: $APK_FILE"
-          ls -la "$APK_FILE"
-          APK_SIZE=$(stat -c%s "$APK_FILE" 2>/dev/null || stat -f%z "$APK_FILE")
-          echo "Release APK Size: $APK_SIZE bytes"
-          if [ "$APK_SIZE" -lt 10000000 ]; then
-            echo "::error::Release APK size is unexpectedly small ($APK_SIZE bytes)!"
-            exit 1
-          fi
-
-          # Verify embedded Hermes JavaScript bundle
-          if unzip -l "$APK_FILE" | grep -q "assets/index.android.bundle"; then
-            echo "VERIFIED: assets/index.android.bundle is embedded in Release APK!"
-          else
-            echo "::error::FATAL: Release APK does NOT contain embedded JavaScript bundle!"
-            exit 1
-          fi
-
-          # Verify multi-architecture compatibility
-          if unzip -l "$APK_FILE" | grep -q "lib/arm64-v8a/"; then
-            echo "VERIFIED: arm64-v8a architecture present (64-bit ARM)"
-          else
-            echo "::error::FATAL: arm64-v8a native libraries missing!"
-            exit 1
-          fi
-          if unzip -l "$APK_FILE" | grep -q "lib/armeabi-v7a/"; then
-            echo "VERIFIED: armeabi-v7a architecture present (32-bit ARM compatibility)"
-          else
-            echo "::error::FATAL: armeabi-v7a native libraries missing!"
-            exit 1
-          fi
-
-          # Explicitly sign with apksigner (v1 JAR signing + v2 APK Sig Block + v3)
-          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -V | tail -n 1)
-          if [ -n "$APKSIGNER" ]; then
-            echo "Signing APK with apksigner using v1, v2, and v3 schemes..."
-            $APKSIGNER sign --ks android/app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true "$APK_FILE"
-            echo "Verifying signature with apksigner:"
-            $APKSIGNER verify --verbose "$APK_FILE"
-          fi
-
-          SHA256=$(sha256sum "$APK_FILE" | awk '{print $1}')
-          echo "Signed Release APK SHA-256: $SHA256"
-          echo "RELEASE_APK_SHA256=$SHA256" >> $GITHUB_ENV
-
-          # Prepare direct download APK
-          cp "$APK_FILE" android/app/build/outputs/apk/release/cinetor-v1.0.2-release.apk
-
+          mkdir -p builds/release
+          cp android/app/build/outputs/apk/release/app-release.apk builds/release/cinetor-v1.0.3-release.apk
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          # Expo defaults to its development certificate. This is a release variant,
+          # but is explicitly NOT a privately signed distribution release.
+          "$APKSIGNER" sign --ks android/app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true builds/release/cinetor-v1.0.3-release.apk
+          python3 tools/verify_apk.py builds/release/cinetor-v1.0.3-release.apk --commit "$GITHUB_SHA" --output builds/release/release-evidence.json
+          cd builds/release
+          sha256sum cinetor-v1.0.3-release.apk > SHA256SUMS
       - uses: actions/upload-artifact@v5
         with:
           name: cinetor-android-release
-          path: android/app/build/outputs/apk/release/*.apk
-
-      - name: Create or update GitHub Release with direct APK download
+          path: builds/release/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish commit-bound APK download
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.2
-          name: Cinator v1.0.2 Production Release
+          tag_name: v1.0.3
+          target_commitish: ${{ github.sha }}
+          name: Cinetor v1.0.3 Android release variant
           body: |
-            ## Cinator v1.0.2 Production Release APK
-            - **Deliverable:** `cinetor-v1.0.2-release.apk`
-            - **Package Name:** `com.cinator.app`
-            - **Version Code:** `3` (Version `1.0.2`)
-            - **Supported Architectures:** Universal (`arm64-v8a`, `armeabi-v7a`, `x86_64`)
-            - **Signatures:** v1 (JAR signing), v2 (APK Signature Scheme v2), v3
-            - **Streamlined Profiles:** Profile switcher section removed; single unified active profile
-            - **Redesigned About Section:** Dedicated About screen with branding, credits, and GitHub repo access
-            - **Engine Cleanup:** BDIX parser engine completely removed for lightweight, rock-solid native streaming
-            - **Feed Isolation:** Home (Movies/Series only), Anime, K-Drama, Live TV, Adult (18+ segregated)
-            
-            ### Installation Instructions
-            1. Download `cinetor-v1.0.2-release.apk` directly below.
-            2. If you previously had an older debug or test build installed, uninstall it first to prevent package signature conflicts.
-            3. Tap the downloaded `.apk` file to install.
+            Modular catalog discovery engine with scoped HTTP(S) JSON, HTML directory,
+            M3U and direct-media adapters. Source configuration starts empty; supply
+            authorized endpoints before live discovery. No real-source scans are claimed.
+            Android scheduled refresh uses Expo BackgroundTask / WorkManager.
+
+            Built from commit ${{ github.sha }}. Package com.cinator.app, version 1.0.3 (4).
+            Universal arm64-v8a / armeabi-v7a / x86_64 release variant with embedded Hermes bundle.
+            Signed with Android's debug certificate: private distribution signing is NOT configured.
+            Device startup/playback/background execution are NOT VERIFIED by this workflow.
+            See release-evidence.json and SHA256SUMS for inspected artifact metadata.
           files: |
-            android/app/build/outputs/apk/release/cinetor-v1.0.2-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            builds/release/cinetor-v1.0.3-release.apk
+            builds/release/release-evidence.json
+            builds/release/SHA256SUMS

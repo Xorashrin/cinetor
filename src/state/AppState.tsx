@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import { MAIN_PROFILE_ID, PROFILE_COLOR, findEpisode, getTitle, type Profile } from '../data/mock';
+import { useEngine } from '../engine/useEngine';
 import { cancelDownload, deleteLocalFile, downloadKey, downloadVideo } from '../services/downloads';
 
 export type Rating = 'down' | 'up' | 'love';
@@ -215,6 +216,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const notifyCatalog = useCallback((version: number) => dispatch({type: "CATALOG_UPDATED", version}), []);
+  useEngine(state.hydrated, notifyCatalog);
 
   useEffect(() => {
     let hydrated = false;

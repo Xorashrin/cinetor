@@ -1,5 +1,5 @@
 export type Kind = 'series' | 'movie';
-export type Maturity = 'ALL' | '7+' | '13+' | '16+' | '18+';
+export type Maturity = 'ALL' | '7+' | '13+' | '16+' | '18+' | 'UNRATED';
 export type Quality = 'HD' | '4K' | 'HDR' | '5.1' | 'AD' | 'CC';
 export type Badge = 'new-episode' | 'new-season' | 'recently-added' | 'leaving-soon';
 
@@ -98,6 +98,14 @@ export const DEFAULT_TITLE: Title = {
 
 export const TITLES: Title[] = [];
 const TITLE_MAP = new Map<string, Title>();
+
+export function syncCatalogTitles(titles: Title[], restricted: Title[] = []): void {
+  TITLES.splice(0, TITLES.length, ...titles);
+  TITLE_MAP.clear(); [...titles, ...restricted].forEach(t => TITLE_MAP.set(t.id, t));
+  AVAILABLE.splice(0, AVAILABLE.length, ...titles);
+  SERIES.splice(0, SERIES.length, ...titles.filter(t => t.kind === "series"));
+  MOVIES.splice(0, MOVIES.length, ...titles.filter(t => t.kind === "movie"));
+}
 
 export function getTitle(id: string): Title {
   return TITLE_MAP.get(id) ?? DEFAULT_TITLE;
