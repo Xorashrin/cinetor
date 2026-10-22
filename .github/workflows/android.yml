@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -36,11 +39,11 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Build Android release APK (arm64)
+      - name: Build Android universal release APK (arm64, armv7, x86_64)
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64 --no-daemon
 
-      - name: Verify Release APK Deliverable
+      - name: Verify and Sign Release APK Deliverable
         run: |
           APK_FILE=$(find android/app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
           if [ -z "$APK_FILE" ]; then
@@ -55,11 +58,8 @@ jobs:
             echo "::error::Release APK size is unexpectedly small ($APK_SIZE bytes)!"
             exit 1
           fi
-          SHA256=$(sha256sum "$APK_FILE" | awk '{print $1}')
-          echo "Release APK SHA-256: $SHA256"
-          echo "RELEASE_APK_SHA256=$SHA256" >> $GITHUB_ENV
 
-          # Verify that the release APK contains the embedded JavaScript bundle
+          # Verify embedded Hermes JavaScript bundle
           if unzip -l "$APK_FILE" | grep -q "assets/index.android.bundle"; then
             echo "VERIFIED: assets/index.android.bundle is embedded in Release APK!"
           else
@@ -67,7 +67,62 @@ jobs:
             exit 1
           fi
 
+          # Verify multi-architecture compatibility
+          if unzip -l "$APK_FILE" | grep -q "lib/arm64-v8a/"; then
+            echo "VERIFIED: arm64-v8a architecture present (64-bit ARM)"
+          else
+            echo "::error::FATAL: arm64-v8a native libraries missing!"
+            exit 1
+          fi
+          if unzip -l "$APK_FILE" | grep -q "lib/armeabi-v7a/"; then
+            echo "VERIFIED: armeabi-v7a architecture present (32-bit ARM compatibility)"
+          else
+            echo "::error::FATAL: armeabi-v7a native libraries missing!"
+            exit 1
+          fi
+
+          # Explicitly sign with apksigner (v1 JAR signing + v2 APK Sig Block + v3)
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -V | tail -n 1)
+          if [ -n "$APKSIGNER" ]; then
+            echo "Signing APK with apksigner using v1, v2, and v3 schemes..."
+            $APKSIGNER sign --ks android/app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true "$APK_FILE"
+            echo "Verifying signature with apksigner:"
+            $APKSIGNER verify --verbose "$APK_FILE"
+          fi
+
+          SHA256=$(sha256sum "$APK_FILE" | awk '{print $1}')
+          echo "Signed Release APK SHA-256: $SHA256"
+          echo "RELEASE_APK_SHA256=$SHA256" >> $GITHUB_ENV
+
+          # Prepare direct download APK
+          cp "$APK_FILE" android/app/build/outputs/apk/release/cinetor-v1.0.1-release.apk
+
       - uses: actions/upload-artifact@v5
         with:
           name: cinetor-android-release
           path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Create or update GitHub Release with direct APK download
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/heads/main')
+        with:
+          tag_name: v1.0.1
+          name: Cinator v1.0.1 Production Release
+          body: |
+            ## Cinator v1.0.1 Production Release APK
+            - **Deliverable:** `cinetor-v1.0.1-release.apk`
+            - **Package Name:** `com.cinator.app`
+            - **Version Code:** `2` (Version `1.0.1`)
+            - **Supported Architectures:** Universal (`arm64-v8a`, `armeabi-v7a`, `x86_64`)
+            - **Signatures:** v1 (JAR signing), v2 (APK Signature Scheme v2), v3
+            - **BDIX Engine:** Background parsing, automatic sync, and fault-isolated indexing
+            - **Feed Isolation:** Home (Movies/Series only), Anime, K-Drama, Live TV, Adult (18+ segregated)
+            
+            ### Installation Instructions
+            1. Download `cinetor-v1.0.1-release.apk` directly below.
+            2. If you previously had an older debug or test build installed, uninstall it first to prevent package signature conflicts.
+            3. Tap the downloaded `.apk` file to install.
+          files: |
+            android/app/build/outputs/apk/release/cinetor-v1.0.1-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
