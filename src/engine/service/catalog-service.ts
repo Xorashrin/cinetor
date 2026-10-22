@@ -77,6 +77,7 @@ export class CatalogService {
 
   private readonly subscribers = new Set<CatalogChangeListener>();
   private isInitialized = false;
+  private initPromise: Promise<Title[]> | null = null;
   private lastForegroundSync = 0;
 
   constructor(
@@ -118,19 +119,39 @@ export class CatalogService {
   /**
    * Initializes the catalog service, loads persistent records from disk,
    * enforces the verified playback gate, and syncs titles to UI state.
+   * Safe, idempotent, and re-entrant.
    */
   public async initialize(): Promise<Title[]> {
-    if (this.repository instanceof PersistentCatalogRepository) {
-      await this.repository.loadFromStorage();
+    if (this.isInitialized) {
+      return this.getVerifiedCatalog();
+    }
+    if (this.initPromise) {
+      return this.initPromise;
     }
 
-    const verifiedItems = await this.repository.find({ verifiedOnly: true });
-    const verifiedTitles = verifiedItems.map(contentItemToTitle);
+    this.initPromise = (async () => {
+      try {
+        if (this.repository instanceof PersistentCatalogRepository) {
+          await this.repository.loadFromStorage();
+        }
 
-    syncCatalogTitles(verifiedTitles);
-    this.notifySubscribers(verifiedTitles);
-    this.isInitialized = true;
-    return verifiedTitles;
+        const verifiedItems = await this.repository.find({ verifiedOnly: true });
+        const verifiedTitles = verifiedItems.map(contentItemToTitle);
+
+        syncCatalogTitles(verifiedTitles);
+        this.notifySubscribers(verifiedTitles);
+        this.isInitialized = true;
+        return verifiedTitles;
+      } catch {
+        // Storage or initialization failure: fallback to empty catalog without halting startup
+        this.isInitialized = true;
+        return [];
+      } finally {
+        this.initPromise = null;
+      }
+    })();
+
+    return this.initPromise;
   }
 
   /**

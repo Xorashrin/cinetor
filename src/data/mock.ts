@@ -244,7 +244,7 @@ export function contentItemToTitle(item: any): Title {
 }
 
 export const GENRES = [
-  'Action', 'Adventure', 'Anime', 'Comedy', 'Crime', 'Drama', 'Fantasy', 'Horror',
+  'Live TV', 'Adult (18+)', 'Action', 'Adventure', 'Anime', 'Comedy', 'Crime', 'Drama', 'Fantasy', 'Horror',
   'K-Drama', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Sports', 'Kids',
 ];
 

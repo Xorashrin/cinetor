@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import Animated, {
@@ -24,6 +24,14 @@ export default function SplashScreen({ navigation }: Props) {
   const { state } = useApp();
   const progress = useSharedValue(0);
   const glow = useSharedValue(0);
+  const hasNavigated = useRef(false);
+
+  const navigateToMain = useCallback(() => {
+    if (!hasNavigated.current) {
+      hasNavigated.current = true;
+      navigation.replace('Main');
+    }
+  }, [navigation]);
 
   useEffect(() => {
     glow.value = withSequence(
@@ -37,13 +45,23 @@ export default function SplashScreen({ navigation }: Props) {
     );
   }, [progress, glow]);
 
+  // Guaranteed fallback timer: navigate to Main no matter what after 800ms
   useEffect(() => {
-    if (!state.hydrated) return;
-    const timer = setTimeout(() => {
-      navigation.replace('Main');
-    }, 700);
-    return () => clearTimeout(timer);
-  }, [state.hydrated, navigation]);
+    const safetyTimer = setTimeout(() => {
+      navigateToMain();
+    }, 800);
+    return () => clearTimeout(safetyTimer);
+  }, [navigateToMain]);
+
+  // Fast-path: navigate as soon as state is hydrated
+  useEffect(() => {
+    if (state.hydrated) {
+      const timer = setTimeout(() => {
+        navigateToMain();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [state.hydrated, navigateToMain]);
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glow.value * 0.7,

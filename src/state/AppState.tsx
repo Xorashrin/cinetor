@@ -220,15 +220,39 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   stateRef.current = state;
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => dispatch({ type: 'HYDRATE', saved: raw ? (JSON.parse(raw) as Partial<State>) : null }))
-      .catch(() => dispatch({ type: 'HYDRATE', saved: null }));
+    let hydrated = false;
 
-    // Initialize backend catalog and sync verified titles into UI collections
-    CatalogService.getInstance()
-      .initialize()
-      .then(() => dispatch({ type: 'CATALOG_UPDATED', version: Date.now() }))
-      .catch(() => undefined);
+    // Race timeout: if AsyncStorage takes longer than 350ms, mark hydrated immediately
+    const hydrationTimeout = setTimeout(() => {
+      if (!hydrated) {
+        hydrated = true;
+        dispatch({ type: 'HYDRATE', saved: null });
+      }
+    }, 350);
+
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((raw) => {
+        if (!hydrated) {
+          hydrated = true;
+          clearTimeout(hydrationTimeout);
+          dispatch({ type: 'HYDRATE', saved: raw ? (JSON.parse(raw) as Partial<State>) : null });
+        }
+      })
+      .catch(() => {
+        if (!hydrated) {
+          hydrated = true;
+          clearTimeout(hydrationTimeout);
+          dispatch({ type: 'HYDRATE', saved: null });
+        }
+      });
+
+    // Defer backend catalog initialization slightly so it never blocks UI thread startup
+    const initTimer = setTimeout(() => {
+      CatalogService.getInstance()
+        .initialize()
+        .then(() => dispatch({ type: 'CATALOG_UPDATED', version: Date.now() }))
+        .catch(() => undefined);
+    }, 100);
 
     // Listen to catalog changes (e.g. background scan, source verification updates, failover)
     const unsubCatalog = CatalogService.getInstance().subscribe(() => {
@@ -243,6 +267,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      clearTimeout(hydrationTimeout);
+      clearTimeout(initTimer);
       unsubCatalog();
       subAppState.remove();
     };

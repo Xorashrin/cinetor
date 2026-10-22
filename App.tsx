@@ -11,7 +11,7 @@ import { DarkTheme, NavigationContainer, type Theme } from '@react-navigation/na
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Toast } from './src/components/Toast';
@@ -44,11 +44,31 @@ export default function App() {
     Inter_900Black,
     BebasNeue_400Regular,
   });
-  const ready = loaded || !!error;
+
+  // Failsafe font timeout: never allow font loading to permanently block app startup
+  const [fontTimeout, setFontTimeout] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFontTimeout(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const ready = loaded || !!error || fontTimeout;
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => undefined);
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
   }, [ready]);
+
+  // Top-level absolute safety timeout to hide native splash screen unconditionally
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!ready) return null;
 

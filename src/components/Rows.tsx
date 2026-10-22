@@ -4,11 +4,14 @@ import React, { memo, useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, View, type ListRenderItem } from 'react-native';
 import Svg, { Text as SvgText } from 'react-native-svg';
 
+import type { AdultChannel } from '../data/adultChannels';
+import type { Channel } from '../data/channels';
 import { img } from '../data/images';
 import type { Title } from '../data/mock';
 import type { ProgressEntry } from '../state/AppState';
 import { colors, font, layout, radius } from '../theme/tokens';
 import { ProgressBar } from './Buttons';
+import { ChannelLogo } from './ChannelLogo';
 import { POSTER, Poster } from './Poster';
 import { Txt } from './Txt';
 
@@ -184,6 +187,104 @@ export const ContinueRow = memo(function ContinueRow({ title, items, onPlay, onI
   );
 });
 
+export interface ChannelRowProps {
+  title: string;
+  items: Channel[];
+  onPressChannel: (channel: Channel) => void;
+  onSeeAll?: () => void;
+}
+
+export const ChannelRow = memo(function ChannelRow({
+  title,
+  items,
+  onPressChannel,
+  onSeeAll,
+}: ChannelRowProps) {
+  const renderItem = useCallback<ListRenderItem<Channel>>(
+    ({ item }) => (
+      <Pressable
+        onPress={() => onPressChannel(item)}
+        style={({ pressed }) => [{ width: 130, opacity: pressed ? 0.7 : 1 }]}
+      >
+        <ChannelLogo channel={item} size={130} />
+        <Txt weight="semibold" size={12} numberOfLines={1} style={{ marginTop: 6 }}>
+          {item.name}
+        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.red }} />
+          <Txt size={10} color={colors.textDim} numberOfLines={1}>
+            {item.category}
+          </Txt>
+        </View>
+      </Pressable>
+    ),
+    [onPressChannel],
+  );
+
+  return (
+    <View style={styles.row}>
+      <RowHeader title={title} onSeeAll={onSeeAll} />
+      <FlatList
+        {...listProps}
+        data={items}
+        keyExtractor={(c) => c.id}
+        renderItem={renderItem}
+        getItemLayout={(_, index) => ({ length: 130 + GAP, offset: (130 + GAP) * index, index })}
+      />
+    </View>
+  );
+});
+
+export interface AdultChannelRowProps {
+  title: string;
+  items: AdultChannel[];
+  onPressChannel: (channel: AdultChannel) => void;
+  onSeeAll?: () => void;
+}
+
+export const AdultChannelRow = memo(function AdultChannelRow({
+  title,
+  items,
+  onPressChannel,
+  onSeeAll,
+}: AdultChannelRowProps) {
+  const renderItem = useCallback<ListRenderItem<AdultChannel>>(
+    ({ item }) => (
+      <Pressable
+        onPress={() => onPressChannel(item)}
+        style={({ pressed }) => [styles.adultCard, pressed && { opacity: 0.8 }]}
+      >
+        <View style={styles.adultBadge}>
+          <Txt weight="black" size={10} color={colors.text}>
+            18+
+          </Txt>
+        </View>
+        <Ionicons name="flame" size={28} color={colors.red} style={{ marginBottom: 4 }} />
+        <Txt weight="bold" size={12} numberOfLines={1} align="center">
+          {item.name}
+        </Txt>
+        <Txt size={10} color={colors.textDim} numberOfLines={1} align="center" style={{ marginTop: 2 }}>
+          {item.category}
+        </Txt>
+      </Pressable>
+    ),
+    [onPressChannel],
+  );
+
+  return (
+    <View style={styles.row}>
+      <RowHeader title={title} onSeeAll={onSeeAll} />
+      <FlatList
+        {...listProps}
+        data={items}
+        keyExtractor={(c) => c.id}
+        renderItem={renderItem}
+        getItemLayout={(_, index) => ({ length: 140 + GAP, offset: (140 + GAP) * index, index })}
+      />
+    </View>
+  );
+});
+
 const styles = StyleSheet.create({
   row: { marginTop: 22 },
   header: {
@@ -222,5 +323,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
+  },
+  adultCard: {
+    width: 140,
+    height: 100,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(229,9,20,0.35)',
+  },
+  adultBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: colors.red,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
   },
 });

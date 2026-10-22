@@ -96,9 +96,17 @@ export class RuleBasedContentClassifier implements ContentClassifier {
       }
     }
 
-    // 3. Maturity Rating Determination
+    // 3. Live TV and Maturity Rating Determination
+    const isLiveTv = /\b(live[.\s_]?tv|iptv|channel|stream)\b/i.test(textToScan) || directorySegments.some((s) => /live[.\s_]?tv|iptv|channel/i.test(s));
+    if (isLiveTv && !genres.includes('Live TV')) {
+      genres.unshift('Live TV');
+    }
+
     if (ADULT_KEYWORDS.test(textToScan)) {
       maturity = '18+';
+      if (!genres.includes('Adult (18+)')) {
+        genres.unshift('Adult (18+)');
+      }
     } else if (genres.includes('Horror') || genres.includes('Crime')) {
       maturity = '16+';
     } else if (isCartoon && !isAnime) {
