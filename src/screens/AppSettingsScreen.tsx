@@ -4,11 +4,9 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -31,13 +29,9 @@ export default function AppSettingsScreen({ navigation }: Props) {
     signOut,
     refreshCatalog,
     engineDiagnostics,
-    addCustomSource,
   } = useApp();
 
   const [isScanning, setIsScanning] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [customName, setCustomName] = useState('');
-  const [customUrl, setCustomUrl] = useState('');
 
   const s = state.settings;
   const notYet = () => showToast('This setting is visual-only in this build');
@@ -56,32 +50,14 @@ export default function AppSettingsScreen({ navigation }: Props) {
   const handleManualScan = async () => {
     if (isScanning || engineDiagnostics.status === 'running') return;
     setIsScanning(true);
-    showToast('Starting BDIX crawler & verification scan...');
+    showToast('Starting background catalog synchronization...');
     try {
       await refreshCatalog();
-      showToast('BDIX scan completed');
+      showToast('Catalog synchronization completed');
     } catch {
-      showToast('Scan encountered errors (see diagnostics below)');
+      showToast('Sync encountered errors');
     } finally {
       setIsScanning(false);
-    }
-  };
-
-  const handleAddSource = async () => {
-    const trimmedUrl = customUrl.trim();
-    const trimmedName = customName.trim() || 'Custom BDIX Source';
-    if (!trimmedUrl) {
-      Alert.alert('Invalid URL', 'Please enter a valid HTTP/HTTPS media endpoint URL.');
-      return;
-    }
-    try {
-      await addCustomSource(trimmedName, trimmedUrl);
-      setShowAddModal(false);
-      setCustomName('');
-      setCustomUrl('');
-      showToast('Custom source added. Tap "Scan Sources Now" to index.');
-    } catch (err: unknown) {
-      Alert.alert('Error Adding Source', err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -134,14 +110,14 @@ export default function AppSettingsScreen({ navigation }: Props) {
           }
         />
 
-        {/* Observable BDIX Scraper & Indexing Diagnostics Section */}
-        <SectionLabel>BDIX Scraper & Engine Diagnostics</SectionLabel>
+        {/* Content Synchronization & Engine Status Section */}
+        <SectionLabel>Content Synchronization</SectionLabel>
         <View style={styles.diagCard}>
           <View style={styles.diagHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="hardware-chip-outline" size={20} color={colors.red} />
+              <Ionicons name="sync-circle-outline" size={22} color={colors.red} />
               <Txt weight="bold" size={15}>
-                Engine Status
+                Catalog Sync State
               </Txt>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
@@ -154,61 +130,29 @@ export default function AppSettingsScreen({ navigation }: Props) {
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
               <Txt size={11} color={colors.textDim}>
-                Configured Sources
-              </Txt>
-              <Txt weight="bold" size={16} style={{ marginTop: 2 }}>
-                {engineDiagnostics.configuredSourcesCount}
-              </Txt>
-            </View>
-            <View style={styles.statBox}>
-              <Txt size={11} color={colors.textDim}>
-                Sources Attempted
-              </Txt>
-              <Txt weight="bold" size={16} style={{ marginTop: 2 }}>
-                {engineDiagnostics.sourcesAttemptedCount}
-              </Txt>
-            </View>
-            <View style={styles.statBox}>
-              <Txt size={11} color={colors.textDim}>
-                Successful Sources
-              </Txt>
-              <Txt weight="bold" size={16} color="#10B981" style={{ marginTop: 2 }}>
-                {engineDiagnostics.successfulSourcesCount}
-              </Txt>
-            </View>
-            <View style={styles.statBox}>
-              <Txt size={11} color={colors.textDim}>
-                Failed Sources
-              </Txt>
-              <Txt weight="bold" size={16} color={engineDiagnostics.failedSourcesCount > 0 ? '#EF4444' : colors.textDim} style={{ marginTop: 2 }}>
-                {engineDiagnostics.failedSourcesCount}
-              </Txt>
-            </View>
-            <View style={styles.statBox}>
-              <Txt size={11} color={colors.textDim}>
-                Items Discovered
-              </Txt>
-              <Txt weight="bold" size={16} style={{ marginTop: 2 }}>
-                {engineDiagnostics.itemsDiscovered}
-              </Txt>
-            </View>
-            <View style={styles.statBox}>
-              <Txt size={11} color={colors.textDim}>
-                Verified Playable
+                Verified Playable Titles
               </Txt>
               <Txt weight="bold" size={16} color={colors.red} style={{ marginTop: 2 }}>
                 {engineDiagnostics.itemsVerified}
+              </Txt>
+            </View>
+            <View style={styles.statBox}>
+              <Txt size={11} color={colors.textDim}>
+                Media Discovered
+              </Txt>
+              <Txt weight="bold" size={16} style={{ marginTop: 2 }}>
+                {engineDiagnostics.itemsDiscovered}
               </Txt>
             </View>
           </View>
 
           <View style={{ marginTop: 12, paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#262626' }}>
             <Txt size={12} color={colors.textDim}>
-              Last Execution:{' '}
+              Last Synchronized:{' '}
               <Txt size={12} weight="semibold" color={colors.text}>
                 {engineDiagnostics.lastRunTime
                   ? new Date(engineDiagnostics.lastRunTime).toLocaleTimeString()
-                  : 'Not executed in this session'}
+                  : 'Pending background scan'}
               </Txt>
             </Txt>
           </View>
@@ -222,8 +166,8 @@ export default function AppSettingsScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          {/* Action Buttons */}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+          {/* Action Button */}
+          <View style={{ marginTop: 14 }}>
             <Pressable
               onPress={handleManualScan}
               disabled={isScanning || engineDiagnostics.status === 'running'}
@@ -239,42 +183,10 @@ export default function AppSettingsScreen({ navigation }: Props) {
                 <Ionicons name="refresh-outline" size={16} color="#FFFFFF" />
               )}
               <Txt weight="bold" size={13} color="#FFFFFF">
-                {isScanning || engineDiagnostics.status === 'running' ? 'Scanning...' : 'Scan Sources Now'}
-              </Txt>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setShowAddModal(true)}
-              style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.8 }]}
-            >
-              <Ionicons name="add-outline" size={16} color={colors.text} />
-              <Txt weight="semibold" size={13}>
-                Add Source
+                {isScanning || engineDiagnostics.status === 'running' ? 'Synchronizing...' : 'Sync Catalog Now'}
               </Txt>
             </Pressable>
           </View>
-
-          {/* Active Sources List */}
-          {engineDiagnostics.activeSources && engineDiagnostics.activeSources.length > 0 ? (
-            <View style={{ marginTop: 16 }}>
-              <Txt size={12} weight="bold" color={colors.textDim} style={{ marginBottom: 6 }}>
-                Active Configured Sources:
-              </Txt>
-              {engineDiagnostics.activeSources.map((source) => (
-                <View key={source.id} style={styles.sourceItem}>
-                  <View style={{ flex: 1 }}>
-                    <Txt weight="semibold" size={12}>
-                      {source.name}
-                    </Txt>
-                    <Txt size={10} color={colors.textDim}>
-                      {source.protocol.toUpperCase()} • {source.baseUrl}
-                    </Txt>
-                  </View>
-                  <View style={[styles.sourceDot, { backgroundColor: source.enabled ? '#10B981' : '#888888' }]} />
-                </View>
-              ))}
-            </View>
-          ) : null}
         </View>
 
         <SectionLabel>About</SectionLabel>
@@ -289,57 +201,6 @@ export default function AppSettingsScreen({ navigation }: Props) {
           }}
         />
       </ScrollView>
-
-      {/* Add Custom Source Modal */}
-      <Modal visible={showAddModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Txt weight="bold" size={18}>
-              Add Custom BDIX Source
-            </Txt>
-            <Txt size={12} color={colors.textDim} style={{ marginTop: 4, marginBottom: 14 }}>
-              Enter an authorized local BDIX HTTP media directory URL:
-            </Txt>
-
-            <TextInput
-              placeholder="Source Name (e.g. ISP Media Mirror)"
-              placeholderTextColor="#666"
-              value={customName}
-              onChangeText={setCustomName}
-              style={styles.modalInput}
-            />
-
-            <TextInput
-              placeholder="http://10.x.x.x/movies or http://bdix.local/media"
-              placeholderTextColor="#666"
-              value={customUrl}
-              onChangeText={setCustomUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={[styles.modalInput, { marginTop: 8 }]}
-            />
-
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-              <Pressable
-                onPress={() => setShowAddModal(false)}
-                style={({ pressed }) => [styles.modalBtnCancel, pressed && { opacity: 0.7 }]}
-              >
-                <Txt size={14} color={colors.textDim}>
-                  Cancel
-                </Txt>
-              </Pressable>
-              <Pressable
-                onPress={handleAddSource}
-                style={({ pressed }) => [styles.modalBtnSave, pressed && { opacity: 0.8 }]}
-              >
-                <Txt weight="bold" size={14} color="#FFFFFF">
-                  Add Source
-                </Txt>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -388,72 +249,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     backgroundColor: colors.red,
-    paddingVertical: 10,
-    borderRadius: radius.sm,
-  },
-  secondaryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#262626',
-    paddingVertical: 10,
-    borderRadius: radius.sm,
-  },
-  sourceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222222',
-  },
-  sourceDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalBox: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: '#1C1C1C',
-    borderRadius: radius.md,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#333333',
-  },
-  modalInput: {
-    backgroundColor: '#121212',
-    color: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: '#333',
-    fontSize: 13,
-  },
-  modalBtnCancel: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  modalBtnSave: {
-    backgroundColor: colors.red,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: radius.sm,
   },
 });

@@ -10,12 +10,10 @@ import { Billboard } from '../components/Billboard';
 import { Chip } from '../components/Chip';
 import { SheetItem } from '../components/ListItems';
 import { MLogo, Wordmark } from '../components/Logo';
-import { AdultChannelRow, ChannelRow, PosterRow, Top10Row, type ContinueItem } from '../components/Rows';
+import { PosterRow, Top10Row, type ContinueItem } from '../components/Rows';
 import { HeaderActions } from '../components/ScreenHeader';
 import { Sheet } from '../components/Sheet';
 import { Txt } from '../components/Txt';
-import { ADULT_CHANNELS } from '../data/adultChannels';
-import { CHANNELS } from '../data/channels';
 import { AVAILABLE, TOP10_MOVIES, TOP10_TV, getTitle, type Title } from '../data/mock';
 import { useRootNav, type TabParamList } from '../navigation/types';
 import { useApp } from '../state/AppState';
@@ -50,16 +48,19 @@ export default function HomeScreen({ route, navigation }: Props) {
   const pool = useMemo(
     () =>
       AVAILABLE.filter(
-        (t) => (filter === 'all' || (filter === 'tv' ? t.kind === 'series' : t.kind === 'movie')) && (!genre || t.genres.includes(genre)),
+        (t) =>
+          (filter === 'all' || (filter === 'tv' ? t.kind === 'series' : t.kind === 'movie')) &&
+          (!genre || t.genres.includes(genre)) &&
+          !t.genres.includes('Anime') &&
+          !t.genres.includes('K-Drama') &&
+          t.maturity !== '18+' &&
+          !t.genres.includes('Adult (18+)'),
       ),
     [filter, genre, catalogVersion],
   );
 
   const hero = pool[0];
   const inMyList = hero ? profileData.myList.includes(hero.id) : false;
-
-  const showChannels = CHANNELS.length > 0 && (filter === 'all' || filter === 'tv' || genre === 'Live TV');
-  const showAdultChannels = ADULT_CHANNELS.length > 0 && genre === 'Adult (18+)';
 
   return (
     <View style={styles.root}>
@@ -84,88 +85,33 @@ export default function HomeScreen({ route, navigation }: Props) {
             />
             {TOP10_TV.length > 0 && !genre ? <Top10Row title="Top 10 Today" items={TOP10_TV} onPressTitle={openTitle} /> : null}
             {pool.length > 1 ? <PosterRow title={genre ? `${genre} Content` : 'Trending Now'} items={pool.slice(1)} onPressTitle={openTitle} /> : null}
-            {showChannels ? (
-              <ChannelRow
-                title="Live TV Channels"
-                items={CHANNELS.slice(0, 15)}
-                onPressChannel={(c) => nav.navigate('Live', { channelId: c.id })}
-                onSeeAll={() => nav.navigate('LiveTv')}
-              />
-            ) : null}
-            {showAdultChannels ? (
-              <AdultChannelRow
-                title="Adult Streams (18+)"
-                items={ADULT_CHANNELS}
-                onPressChannel={(c) => nav.navigate('Live', { channelId: c.id })}
-                onSeeAll={() => nav.navigate('LiveTv')}
-              />
-            ) : null}
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            {showChannels ? (
-              <View style={{ width: '100%', marginBottom: 20 }}>
-                <ChannelRow
-                  title="Live TV Channels"
-                  items={CHANNELS.slice(0, 15)}
-                  onPressChannel={(c) => nav.navigate('Live', { channelId: c.id })}
-                  onSeeAll={() => nav.navigate('LiveTv')}
-                />
+            <View style={styles.logoWrap}>
+              <MLogo size={54} />
+              <View style={{ marginTop: 12 }}>
+                <Wordmark size={30} />
               </View>
-            ) : null}
-
-            {showAdultChannels ? (
-              <View style={{ width: '100%', marginBottom: 20 }}>
-                <AdultChannelRow
-                  title="Adult Streams (18+)"
-                  items={ADULT_CHANNELS}
-                  onPressChannel={(c) => nav.navigate('Live', { channelId: c.id })}
-                  onSeeAll={() => nav.navigate('LiveTv')}
-                />
-              </View>
-            ) : null}
-
-            {!showChannels && !showAdultChannels ? (
-              <>
-                <View style={styles.logoWrap}>
-                  <MLogo size={54} />
-                  <View style={{ marginTop: 12 }}>
-                    <Wordmark size={30} />
-                  </View>
-                </View>
-                <Txt weight="bold" size={20} align="center" style={{ marginTop: 18 }}>
-                  Welcome, {name}
-                </Txt>
-                <Txt size={13} color={colors.textDim} align="center" style={styles.emptySubtitle}>
-                  Clean and blank stream template ready. No mock data or external APIs are connected.
-                </Txt>
-              </>
-            ) : null}
+            </View>
+            <Txt weight="bold" size={20} align="center" style={{ marginTop: 18 }}>
+              Welcome, {name}
+            </Txt>
+            <Txt size={13} color={colors.textDim} align="center" style={styles.emptySubtitle}>
+              Clean streaming home ready. Movies and series will appear here once discovered and verified.
+            </Txt>
 
             <View style={styles.actionGrid}>
-              <Pressable
-                onPress={() => nav.navigate('LiveTv')}
-                style={({ pressed }) => [styles.actionCard, pressed && { opacity: 0.7 }]}
-              >
-                <Ionicons name="tv-outline" size={22} color={colors.red} />
-                <Txt weight="bold" size={14} style={{ marginTop: 8 }}>
-                  Live TV
-                </Txt>
-                <Txt size={11} color={colors.textDim} align="center" style={{ marginTop: 2 }}>
-                  Channels & Streams
-                </Txt>
-              </Pressable>
-
               <Pressable
                 onPress={() => nav.navigate('Search')}
                 style={({ pressed }) => [styles.actionCard, pressed && { opacity: 0.7 }]}
               >
-                <Ionicons name="search" size={22} color={colors.red} />
+                <Ionicons name="search-outline" size={22} color={colors.red} />
                 <Txt weight="bold" size={14} style={{ marginTop: 8 }}>
-                  Search Catalog
+                  Search
                 </Txt>
                 <Txt size={11} color={colors.textDim} align="center" style={{ marginTop: 2 }}>
-                  Find titles & channels
+                  Find titles
                 </Txt>
               </Pressable>
 
@@ -178,7 +124,7 @@ export default function HomeScreen({ route, navigation }: Props) {
                   Settings
                 </Txt>
                 <Txt size={11} color={colors.textDim} align="center" style={{ marginTop: 2 }}>
-                  Storage & sources
+                  Storage & sync
                 </Txt>
               </Pressable>
             </View>

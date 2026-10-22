@@ -243,8 +243,13 @@ export function contentItemToTitle(item: any): Title {
   };
 }
 
+export const HOME_GENRES = [
+  'Action', 'Adventure', 'Comedy', 'Crime', 'Drama', 'Fantasy', 'Horror',
+  'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Sports', 'Kids',
+];
+
 export const GENRES = [
-  'Live TV', 'Adult (18+)', 'Action', 'Adventure', 'Anime', 'Comedy', 'Crime', 'Drama', 'Fantasy', 'Horror',
+  'Action', 'Adventure', 'Anime', 'Comedy', 'Crime', 'Drama', 'Fantasy', 'Horror',
   'K-Drama', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Sports', 'Kids',
 ];
 

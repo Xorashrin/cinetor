@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { PickerList } from '../components/ListItems';
-import { GENRES } from '../data/mock';
+import { HOME_GENRES } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/tokens';
 
@@ -15,10 +15,20 @@ export default function CategoriesScreen({ navigation, route }: Props) {
   const current = route.params?.current ?? HOME;
   const targetTab = route.params?.targetTab ?? 'Home';
 
+  const options = React.useMemo(() => {
+    if (targetTab === 'Anime') {
+      return [HOME, 'My List', 'Action', 'Shonen', 'Fantasy', 'Romance', 'Sci-Fi'];
+    }
+    if (targetTab === 'KDrama') {
+      return [HOME, 'My List', 'Romance', 'Thriller', 'Mystery', 'Comedy', 'Drama'];
+    }
+    return [HOME, 'My List', ...HOME_GENRES];
+  }, [targetTab]);
+
   return (
     <View style={styles.root}>
       <PickerList
-        options={[HOME, 'My List', ...GENRES]}
+        options={options}
         selected={current}
         onClose={() => navigation.goBack()}
         onSelect={(value) => {

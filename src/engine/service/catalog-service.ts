@@ -154,6 +154,10 @@ export class CatalogService {
   private itemsVerified = 0;
   private lastError: string | null = null;
   private isRefreshing = false;
+  private bgSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryCount = 0;
+  private readonly MAX_AUTO_RETRIES = 3;
+  private readonly PERIODIC_SYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
   constructor(
     storageDriver: StorageDriver = new SafeAsyncStorageDriver(),
@@ -188,6 +192,9 @@ export class CatalogService {
   }
 
   public static resetInstance(): void {
+    if (CatalogService.instance) {
+      CatalogService.instance.cancelBackgroundSync();
+    }
     CatalogService.instance = null;
   }
 
@@ -210,7 +217,7 @@ export class CatalogService {
    * enforces the verified playback gate, and syncs titles to UI state.
    * Safe, idempotent, and re-entrant.
    */
-  public async initialize(): Promise<Title[]> {
+  public async initialize(options: { autoScan?: boolean } = { autoScan: true }): Promise<Title[]> {
     if (this.isInitialized) {
       return this.getVerifiedCatalog();
     }
@@ -238,6 +245,12 @@ export class CatalogService {
         this.isInitialized = true;
         this.engineStatus = 'idle';
         this.notifyDiagnostics();
+
+        // Automatically schedule initial background sync after essential startup finishes (non-blocking)
+        if (options.autoScan !== false) {
+          this.scheduleBackgroundSync(1500);
+        }
+
         return verifiedTitles;
       } catch (err: unknown) {
         // Storage or initialization failure: fallback to empty catalog without halting startup
@@ -365,6 +378,10 @@ export class CatalogService {
       syncCatalogTitles(verifiedTitles);
       this.notifySubscribers(verifiedTitles);
 
+      if (this.repository instanceof PersistentCatalogRepository) {
+        await this.repository.persistToStorage();
+      }
+
       this.engineStatus = this.successfulSourcesCount > 0 || verifiedTitles.length > 0 ? 'completed' : 'failed';
       this.lastRunTime = Date.now();
       this.notifyDiagnostics();
@@ -393,6 +410,51 @@ export class CatalogService {
   }
 
   /**
+   * Schedules an automatic background catalog scan.
+   * Runs completely detached from UI rendering, with concurrency lock and bounded exponential backoff.
+   */
+  public scheduleBackgroundSync(delayMs = 1500): void {
+    if (this.bgSyncTimer) {
+      clearTimeout(this.bgSyncTimer);
+      this.bgSyncTimer = null;
+    }
+
+    const timer = setTimeout(async () => {
+      this.bgSyncTimer = null;
+      if (this.isRefreshing) return;
+
+      try {
+        await this.refresh();
+        this.retryCount = 0;
+        this.scheduleBackgroundSync(this.PERIODIC_SYNC_INTERVAL_MS);
+      } catch {
+        if (this.retryCount < this.MAX_AUTO_RETRIES) {
+          this.retryCount++;
+          const backoff = Math.min(15_000 * Math.pow(2, this.retryCount), 15 * 60 * 1000);
+          this.scheduleBackgroundSync(backoff);
+        } else {
+          this.scheduleBackgroundSync(this.PERIODIC_SYNC_INTERVAL_MS);
+        }
+      }
+    }, delayMs);
+
+    if (timer && typeof timer === 'object' && typeof (timer as any).unref === 'function') {
+      (timer as any).unref();
+    }
+    this.bgSyncTimer = timer;
+  }
+
+  /**
+   * Cancels any pending scheduled background sync timer.
+   */
+  public cancelBackgroundSync(): void {
+    if (this.bgSyncTimer) {
+      clearTimeout(this.bgSyncTimer);
+      this.bgSyncTimer = null;
+    }
+  }
+
+  /**
    * Lifecycle handler called when the app transitions to active foreground.
    * Reconciles catalog state without blocking UI threads.
    */
@@ -414,6 +476,12 @@ export class CatalogService {
     syncCatalogTitles(verifiedTitles);
     this.notifySubscribers(verifiedTitles);
     this.notifyDiagnostics();
+
+    // Check if background scan is due (>10 min since last scan)
+    const timeSinceLastRun = this.lastRunTime ? now - this.lastRunTime : Infinity;
+    if (timeSinceLastRun > 10 * 60 * 1000 && !this.isRefreshing) {
+      this.scheduleBackgroundSync(500);
+    }
   }
 
   /**

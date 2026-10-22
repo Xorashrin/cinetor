@@ -9,7 +9,7 @@ import { RuleBasedContentClassifier } from '../../src/engine/classifier/rule-bas
 import { RuleBasedFilenameParser } from '../../src/engine/parser/rule-based-filename-parser';
 import { InMemoryCatalogRepository } from '../../src/engine/repository/in-memory-catalog-repository';
 import { InMemorySourceRegistry } from '../../src/engine/adapters/in-memory-source-registry';
-import { GENRES, AVAILABLE, syncCatalogTitles, type Title } from '../../src/data/mock';
+import { GENRES, HOME_GENRES, AVAILABLE, syncCatalogTitles, type Title } from '../../src/data/mock';
 import type { StorageDriver } from '../../src/engine/repository/persistent-catalog-repository';
 
 test('Startup & Resilience - SafeAsyncStorageDriver memory fallback', async () => {
@@ -28,9 +28,9 @@ test('Startup & Resilience - Idempotent and concurrent CatalogService.initialize
 
   // Run multiple concurrent initializations
   const [init1, init2, init3] = await Promise.all([
-    service.initialize(),
-    service.initialize(),
-    service.initialize(),
+    service.initialize({ autoScan: false }),
+    service.initialize({ autoScan: false }),
+    service.initialize({ autoScan: false }),
   ]);
 
   assert.ok(Array.isArray(init1));
@@ -38,7 +38,7 @@ test('Startup & Resilience - Idempotent and concurrent CatalogService.initialize
   assert.strictEqual(init2, init3);
 
   // Subsequent call returns cached catalog
-  const initSubsequent = await service.initialize();
+  const initSubsequent = await service.initialize({ autoScan: false });
   assert.deepStrictEqual(initSubsequent, init1);
   CatalogService.resetInstance();
 });
@@ -58,7 +58,7 @@ test('Startup & Resilience - CatalogService survives throwing storage driver gra
 
   const service = new CatalogService(faultyDriver);
   // Must NOT throw or reject; must return empty verified catalog gracefully
-  const catalog = await service.initialize();
+  const catalog = await service.initialize({ autoScan: false });
   assert.ok(Array.isArray(catalog));
 });
 
@@ -306,7 +306,149 @@ test('Startup & Classification - Adult 18+ stream and content classification', (
   assert.ok(result.genres.includes('Adult (18+)'), 'Must include Adult (18+) genre');
 });
 
-test('Startup & Classification - GENRES list contains Live TV and Adult (18+)', () => {
-  assert.ok(GENRES.includes('Live TV'), 'GENRES must include Live TV');
-  assert.ok(GENRES.includes('Adult (18+)'), 'GENRES must include Adult (18+)');
+test('Feed Isolation - GENRES and HOME_GENRES lists exclude Live TV and Adult (18+)', () => {
+  assert.strictEqual(GENRES.includes('Live TV'), false, 'GENRES must NOT include Live TV');
+  assert.strictEqual(GENRES.includes('Adult (18+)'), false, 'GENRES must NOT include Adult (18+)');
+  assert.strictEqual(HOME_GENRES.includes('Live TV'), false, 'HOME_GENRES must NOT include Live TV');
+  assert.strictEqual(HOME_GENRES.includes('Adult (18+)'), false, 'HOME_GENRES must NOT include Adult (18+)');
+  assert.strictEqual(HOME_GENRES.includes('Anime'), false, 'HOME_GENRES must NOT include Anime (has dedicated tab)');
+  assert.strictEqual(HOME_GENRES.includes('K-Drama'), false, 'HOME_GENRES must NOT include K-Drama (has dedicated tab)');
+});
+
+test('Feed Isolation - Home, Anime, K-Drama, and Search Feed content filtering', () => {
+  const titles: Title[] = [
+    {
+      id: 'movie_1',
+      name: 'Regular Action Movie',
+      kind: 'movie',
+      year: 2024,
+      maturity: '16+',
+      runtime: 120,
+      seasons: [],
+      genres: ['Action', 'Thriller'],
+      moods: ['Exciting'],
+      synopsis: 'An action movie',
+      cast: [],
+      creators: [],
+      original: false,
+      seed: '1',
+      tint: '#E50914',
+      video: 'http://test.com/movie1.mp4',
+      quality: ['HD'],
+      sources: [{ url: 'http://test.com/movie1.mp4' }],
+    },
+    {
+      id: 'anime_1',
+      name: 'Naruto Special',
+      kind: 'series',
+      year: 2024,
+      maturity: '13+',
+      runtime: 24,
+      seasons: [{ number: 1, episodes: [{ id: 'ep1', number: 1, name: 'Ep 1', runtime: 24, synopsis: '', seed: '1', video: 'http://test.com/anime1.mp4' }] }],
+      genres: ['Anime', 'Action', 'Shonen'],
+      moods: ['Binge-Worthy'],
+      synopsis: 'An anime series',
+      cast: [],
+      creators: [],
+      original: false,
+      seed: '2',
+      tint: '#E50914',
+      video: 'http://test.com/anime1.mp4',
+      quality: ['HD'],
+      sources: [{ url: 'http://test.com/anime1.mp4' }],
+    },
+    {
+      id: 'kdrama_1',
+      name: 'Crash Landing Romance',
+      kind: 'series',
+      year: 2024,
+      maturity: '16+',
+      runtime: 60,
+      seasons: [{ number: 1, episodes: [{ id: 'ep1', number: 1, name: 'Ep 1', runtime: 60, synopsis: '', seed: '1', video: 'http://test.com/kdrama1.mp4' }] }],
+      genres: ['K-Drama', 'Romance', 'Drama'],
+      moods: ['Heartfelt'],
+      synopsis: 'A k-drama series',
+      cast: [],
+      creators: [],
+      original: false,
+      seed: '3',
+      tint: '#E50914',
+      video: 'http://test.com/kdrama1.mp4',
+      quality: ['HD'],
+      sources: [{ url: 'http://test.com/kdrama1.mp4' }],
+    },
+    {
+      id: 'adult_1',
+      name: 'Adult Midnight 18+',
+      kind: 'movie',
+      year: 2024,
+      maturity: '18+',
+      runtime: 90,
+      seasons: [],
+      genres: ['Adult (18+)', 'Late Night'],
+      moods: [],
+      synopsis: 'Adult stream',
+      cast: [],
+      creators: [],
+      original: false,
+      seed: '4',
+      tint: '#E50914',
+      video: 'http://test.com/adult1.mp4',
+      quality: ['HD'],
+      sources: [{ url: 'http://test.com/adult1.mp4' }],
+    },
+  ];
+
+  syncCatalogTitles(titles);
+
+  // Home filter: Movies/Series only, strictly excluding Anime, K-Drama, and Adult
+  const homeItems = AVAILABLE.filter(
+    (t) =>
+      !t.genres.includes('Anime') &&
+      !t.genres.includes('K-Drama') &&
+      t.maturity !== '18+' &&
+      !t.genres.includes('Adult (18+)'),
+  );
+  assert.strictEqual(homeItems.length, 1);
+  assert.strictEqual(homeItems[0].id, 'movie_1');
+
+  // Anime feed: strictly Anime only, excluding Adult
+  const animeItems = AVAILABLE.filter(
+    (t) => t.genres.includes('Anime') && t.maturity !== '18+' && !t.genres.includes('Adult (18+)'),
+  );
+  assert.strictEqual(animeItems.length, 1);
+  assert.strictEqual(animeItems[0].id, 'anime_1');
+
+  // K-Drama feed: strictly K-Drama only, excluding Adult
+  const kdramaItems = AVAILABLE.filter(
+    (t) => t.genres.includes('K-Drama') && t.maturity !== '18+' && !t.genres.includes('Adult (18+)'),
+  );
+  assert.strictEqual(kdramaItems.length, 1);
+  assert.strictEqual(kdramaItems[0].id, 'kdrama_1');
+
+  // Search index: must NEVER contain adult items
+  const searchableItems = AVAILABLE.filter(
+    (t) => t.maturity !== '18+' && !t.genres.includes('Adult (18+)'),
+  );
+  assert.strictEqual(searchableItems.some((t) => t.id === 'adult_1'), false);
+  assert.strictEqual(searchableItems.length, 3);
+});
+
+test('Background Parsing - Automated scan scheduling and non-blocking startup', async () => {
+  CatalogService.resetInstance();
+  const service = CatalogService.getInstance();
+
+  // initialize() returns cached catalog immediately without awaiting network
+  const initPromise = service.initialize();
+  assert.ok(initPromise instanceof Promise);
+  const titles = await initPromise;
+  assert.ok(Array.isArray(titles));
+
+  // Diagnostic state should report active or idle
+  const diag = await service.getDiagnostics();
+  assert.ok(['idle', 'running', 'completed'].includes(diag.status));
+
+  // cancel pending timer cleanly
+  service.cancelBackgroundSync();
+  CatalogService.resetInstance();
 });

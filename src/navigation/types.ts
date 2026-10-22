@@ -5,6 +5,7 @@ export type TabParamList = {
   Home: { genre?: string } | undefined;
   Anime: { genre?: string } | undefined;
   KDrama: { genre?: string } | undefined;
+  LiveTv: undefined;
   Profiles: undefined;
 };
 

@@ -40,7 +40,7 @@ export default function KDramaScreen({ route, navigation }: Props) {
 
   const kdramaList = useMemo(() => {
     return AVAILABLE.filter((t) => {
-      const isKDrama = t.genres.includes('K-Drama');
+      const isKDrama = t.genres.includes('K-Drama') && t.maturity !== '18+' && !t.genres.includes('Adult (18+)');
       if (selectedFilter === 'All') return isKDrama;
       return isKDrama && t.genres.includes(selectedFilter);
     });

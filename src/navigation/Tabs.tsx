@@ -8,6 +8,7 @@ import { CreditPopup } from '../components/CreditPopup';
 import AnimeScreen from '../screens/AnimeScreen';
 import HomeScreen from '../screens/HomeScreen';
 import KDramaScreen from '../screens/KDramaScreen';
+import LiveTvScreen from '../screens/LiveTvScreen';
 import ProfilesScreen from '../screens/ProfilesScreen';
 import { useApp } from '../state/AppState';
 import { colors, font } from '../theme/tokens';
@@ -60,6 +61,14 @@ export function Tabs() {
           options={{
             title: 'K-Drama',
             tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'film' : 'film-outline'} size={24} color={color} />,
+          }}
+        />
+        <Tab.Screen
+          name="LiveTv"
+          component={LiveTvScreen}
+          options={{
+            title: 'Live TV',
+            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'tv' : 'tv-outline'} size={24} color={color} />,
           }}
         />
         <Tab.Screen

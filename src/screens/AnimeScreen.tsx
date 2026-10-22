@@ -40,7 +40,7 @@ export default function AnimeScreen({ route, navigation }: Props) {
 
   const animeList = useMemo(() => {
     return AVAILABLE.filter((t) => {
-      const isAnime = t.genres.includes('Anime');
+      const isAnime = t.genres.includes('Anime') && t.maturity !== '18+' && !t.genres.includes('Adult (18+)');
       if (selectedFilter === 'All') return isAnime;
       return isAnime && t.genres.includes(selectedFilter);
     });

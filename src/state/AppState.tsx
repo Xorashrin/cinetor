@@ -211,7 +211,6 @@ interface AppContextValue {
   showToast: (message: string) => void;
   clearToast: (id: number) => void;
   refreshCatalog: () => Promise<void>;
-  addCustomSource: (name: string, baseUrl: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -292,6 +291,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(initTimer);
       unsubCatalog();
       subAppState.remove();
+      CatalogService.getInstance().cancelBackgroundSync();
     };
   }, []);
 
@@ -362,19 +362,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CATALOG_UPDATED', version: Date.now() });
   }, []);
 
-  const addCustomSource = useCallback(async (name: string, baseUrl: string) => {
-    await CatalogService.getInstance().addCustomSource({
-      name,
-      baseUrl,
-      protocol: baseUrl.startsWith('https') ? 'https' : baseUrl.startsWith('ftp') ? 'ftp' : 'http',
-      type: 'directory-listing',
-      enabled: true,
-      priority: 5,
-    });
-    const diag = await CatalogService.getInstance().getDiagnostics();
-    setEngineDiagnostics(diag);
-  }, []);
-
   const value = useMemo<AppContextValue>(() => {
     const activeProfile: Profile = { id: MAIN_PROFILE_ID, name: state.userName || 'Cinator User', color: PROFILE_COLOR };
     return {
@@ -398,9 +385,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       showToast,
       clearToast: (id: number) => dispatch({ type: 'CLEAR_TOAST', id }),
       refreshCatalog,
-      addCustomSource,
     };
-  }, [state, engineDiagnostics, startDownload, deleteDownload, resetData, signOut, showToast, refreshCatalog, addCustomSource]);
+  }, [state, engineDiagnostics, startDownload, deleteDownload, resetData, signOut, showToast, refreshCatalog]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

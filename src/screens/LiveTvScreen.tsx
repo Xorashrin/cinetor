@@ -21,7 +21,10 @@ import { CHANNEL_FILTERS, filterChannels, type Channel } from '../data/channels'
 import type { RootStackParamList } from '../navigation/types';
 import { colors, layout, radius } from '../theme/tokens';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'LiveTv'>;
+type Props = {
+  navigation: any;
+  route?: any;
+};
 type ActiveSection = 'general' | 'adult';
 
 const COLUMNS = 3;
@@ -109,9 +112,11 @@ export default function LiveTvScreen({ navigation }: Props) {
     [navigation],
   );
 
+  const canGoBack = Boolean(navigation?.canGoBack && navigation.canGoBack());
+
   return (
     <View style={styles.root}>
-      <ScreenHeader title="Live TV Directory" back actions={['search']} />
+      <ScreenHeader title="Live TV Directory" back={canGoBack} actions={['search']} />
 
       {/* Isolated Section Switcher */}
       <View style={styles.sectionSwitcher}>

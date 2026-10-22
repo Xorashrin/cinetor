@@ -27,7 +27,7 @@ export default function SearchScreen({ navigation }: Props) {
 
   const index = useMemo(
     () =>
-      AVAILABLE.map((t) => ({
+      AVAILABLE.filter((t) => t.maturity !== '18+' && !t.genres.includes('Adult (18+)')).map((t) => ({
         title: t,
         haystack: [t.name, ...t.genres, ...t.cast, ...t.moods, ...t.creators].join('|').toLowerCase(),
       })),
