@@ -39,5 +39,5 @@ jobs:
 
       - uses: actions/upload-artifact@v5
         with:
-          name: MythTube-apk
+          name: cinator-apk
           path: android/app/build/outputs/apk/release/*.apk

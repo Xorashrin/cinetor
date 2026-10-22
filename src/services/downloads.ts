@@ -4,7 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library/legacy';
 
 const DIR = `${FileSystem.documentDirectory ?? ''}downloads/`;
-const ALBUM = 'MythTube';
+const ALBUM = 'Cinator';
 
 const active = new Map<string, FileSystem.DownloadResumable>();
 

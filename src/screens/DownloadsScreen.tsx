@@ -173,7 +173,7 @@ export default function DownloadsScreen({ navigation }: Props) {
         </View>
         <View style={styles.storageLegend}>
           <Txt size={11} color={colors.textMuted}>Used • 38.2 GB</Txt>
-          <Txt size={11} color={colors.textMuted}>MythTube • {formatSize(usedMB)}</Txt>
+          <Txt size={11} color={colors.textMuted}>Cinator • {formatSize(usedMB)}</Txt>
           <Txt size={11} color={colors.textMuted}>Free • 72.4 GB</Txt>
         </View>
       </View>

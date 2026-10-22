@@ -19,7 +19,17 @@ export default function NotificationsScreen({ navigation }: Props) {
       <FlatList
         data={NOTIFICATIONS}
         keyExtractor={(n) => n.id}
-        contentContainerStyle={{ paddingBottom: 30 }}
+        contentContainerStyle={{ paddingBottom: 30, flexGrow: 1 }}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Txt weight="bold" size={18} align="center">
+              No notifications yet
+            </Txt>
+            <Txt size={13} color={colors.textDim} align="center" style={{ marginTop: 6 }}>
+              We'll let you know when new titles and updates arrive.
+            </Txt>
+          </View>
+        }
         renderItem={({ item, index }) => {
           const title = getTitle(item.titleId);
           return (
@@ -55,4 +65,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.red, marginRight: 8 },
   thumb: { width: 112, height: 63, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surface2 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 },
 });

@@ -9,10 +9,12 @@ import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
-const HOME = 'Home';
+const HOME = 'All';
 
 export default function CategoriesScreen({ navigation, route }: Props) {
   const current = route.params?.current ?? HOME;
+  const targetTab = route.params?.targetTab ?? 'Home';
+
   return (
     <View style={styles.root}>
       <PickerList
@@ -25,7 +27,13 @@ export default function CategoriesScreen({ navigation, route }: Props) {
             navigation.navigate('MyList');
             return;
           }
-          navigation.navigate('Main', { screen: 'Home', params: { genre: value === HOME ? undefined : value } });
+          if (targetTab === 'Anime') {
+            navigation.navigate('Main', { screen: 'Anime', params: { genre: value === HOME ? undefined : value } });
+          } else if (targetTab === 'KDrama') {
+            navigation.navigate('Main', { screen: 'KDrama', params: { genre: value === HOME ? undefined : value } });
+          } else {
+            navigation.navigate('Main', { screen: 'Home', params: { genre: value === HOME ? undefined : value } });
+          }
         }}
       />
     </View>

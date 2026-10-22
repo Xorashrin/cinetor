@@ -5,7 +5,6 @@ import Svg, { Polygon } from 'react-native-svg';
 import { colors } from '../theme/tokens';
 import { Txt } from './Txt';
 
-// Same geometry as tools/make_icons.py (1024 canvas, cropped to the mark).
 const BAR = '#B1060F';
 
 export function MLogo({ size = 28 }: { size?: number }) {
@@ -23,7 +22,7 @@ export function Wordmark({ size = 34 }: { size?: number }) {
   return (
     <View>
       <Txt weight="display" size={size} color={colors.red} spacing={1.5} lineHeight={size * 1.05}>
-        MYTHTUBE
+        CINATOR
       </Txt>
     </View>
   );

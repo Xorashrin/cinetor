@@ -3,7 +3,6 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { MAIN_PROFILE_ID, PROFILE_COLOR, findEpisode, getTitle, type Profile } from '../data/mock';
 import { cancelDownload, deleteLocalFile, downloadKey, downloadVideo } from '../services/downloads';
-import { signOutAccount, watchAuth, type AccountUser } from '../services/firebase';
 
 export type Rating = 'down' | 'up' | 'love';
 
@@ -55,7 +54,6 @@ interface State {
 
 type Action =
   | { type: 'HYDRATE'; saved: Partial<State> | null }
-  | { type: 'AUTH'; user: AccountUser | null }
   | { type: 'SET_NAME'; name: string }
   | { type: 'CREDIT_SEEN' }
   | { type: 'TOGGLE_MY_LIST'; id: string }
@@ -69,31 +67,27 @@ type Action =
   | { type: 'DOWNLOAD_FAILED'; titleId: string; episodeId?: string }
   | { type: 'DOWNLOAD_REMOVE'; titleId: string; episodeId?: string }
   | { type: 'TOGGLE_SETTING'; key: keyof Settings }
+  | { type: 'RESET_DATA' }
   | { type: 'TOAST'; message: string }
   | { type: 'CLEAR_TOAST'; id: number };
 
-const STORAGE_KEY = 'mythtube:v2';
+const STORAGE_KEY = 'cinator:v1';
 
-const now = Date.now();
 const starterData: ProfileData = {
-  myList: ['ashen-crown', 'glass-horizon', 'hollow-pines', 'monsoon-heist', 'starfall-academy'],
-  ratings: { 'neon-monsoon': 'love' },
+  myList: [],
+  ratings: {},
   reminders: [],
-  progress: [
-    { titleId: 'ninth-oracle', episodeId: 'ninth-oracle-s1e3', position: 410, duration: 596, updatedAt: now - 1000 },
-    { titleId: 'last-lantern', position: 260, duration: 653, updatedAt: now - 2000 },
-    { titleId: 'neon-monsoon', episodeId: 'neon-monsoon-s2e1', position: 120, duration: 888, updatedAt: now - 3000 },
-  ],
+  progress: [],
   downloads: [],
 };
 
 const initialState: State = {
   hydrated: false,
-  authReady: false,
-  signedIn: false,
-  userName: '',
-  email: '',
-  creditSeen: false,
+  authReady: true,
+  signedIn: true,
+  userName: 'Cinator User',
+  email: 'user@cinator.app',
+  creditSeen: true,
   data: starterData,
   settings: { wifiOnly: true, smartDownloads: true, notifications: true, autoplayNext: true, autoplayPreviews: true },
   toast: null,
@@ -114,19 +108,24 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'HYDRATE': {
       const saved = action.saved ?? {};
-      // Sign-in state comes from Firebase, never from local storage.
-      const merged: State = { ...state, ...saved, signedIn: state.signedIn, userName: state.userName, email: state.email, authReady: state.authReady, toast: null, hydrated: true };
-      // Downloads interrupted by an app restart cannot resume; mark them failed.
+      const merged: State = {
+        ...state,
+        ...saved,
+        signedIn: true,
+        authReady: true,
+        userName: saved.userName || state.userName,
+        toast: null,
+        hydrated: true,
+      };
       merged.data = {
-        ...merged.data,
-        downloads: (merged.data.downloads ?? []).map((x): DownloadEntry => (x.status === 'downloading' ? { ...x, status: 'failed' } : x)),
+        myList: saved.data?.myList ?? [],
+        ratings: saved.data?.ratings ?? {},
+        reminders: saved.data?.reminders ?? [],
+        progress: saved.data?.progress ?? [],
+        downloads: (saved.data?.downloads ?? []).map((x): DownloadEntry => (x.status === 'downloading' ? { ...x, status: 'failed' } : x)),
       };
       return merged;
     }
-    case 'AUTH':
-      return action.user
-        ? { ...state, authReady: true, signedIn: true, userName: action.user.name, email: action.user.email }
-        : { ...state, authReady: true, signedIn: false, userName: '', email: '' };
     case 'SET_NAME':
       return { ...state, userName: action.name };
     case 'CREDIT_SEEN':
@@ -173,6 +172,8 @@ function reducer(state: State, action: Action): State {
       }));
     case 'TOGGLE_SETTING':
       return { ...state, settings: { ...state.settings, [action.key]: !state.settings[action.key] } };
+    case 'RESET_DATA':
+      return { ...state, data: starterData };
     case 'TOAST':
       return { ...state, toast: { id: Date.now(), message: action.message } };
     case 'CLEAR_TOAST':
@@ -197,6 +198,7 @@ interface AppContextValue {
   startDownload: (titleId: string, sizeMB: number, episodeId?: string) => void;
   deleteDownload: (titleId: string, episodeId?: string) => void;
   toggleSetting: (key: keyof Settings) => void;
+  resetData: () => void;
   showToast: (message: string) => void;
   clearToast: (id: number) => void;
 }
@@ -216,11 +218,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!state.hydrated) return;
-    const { creditSeen, data, settings } = state;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ creditSeen, data, settings })).catch(() => undefined);
+    const { creditSeen, data, settings, userName } = state;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ creditSeen, data, settings, userName })).catch(() => undefined);
   }, [state]);
-
-  useEffect(() => watchAuth((user) => dispatch({ type: 'AUTH', user })), []);
 
   const showToast = useCallback((message: string) => dispatch({ type: 'TOAST', message }), []);
 
@@ -228,6 +228,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     (titleId: string, sizeMB: number, episodeId?: string) => {
       const title = getTitle(titleId);
       const url = episodeId ? findEpisode(title, episodeId)?.episode.video ?? title.video : title.video;
+      if (!url) {
+        showToast('No video available to download');
+        return;
+      }
       dispatch({ type: 'DOWNLOAD_START', titleId, episodeId, sizeMB });
       let last = 0;
       downloadVideo(downloadKey(titleId, episodeId), url, (ratio) => {
@@ -237,18 +241,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         }
       })
         .then((r) => {
-          const stillWanted = stateRef.current.data.downloads.some((x) => same(x, titleId, episodeId));
+          const stillWanted = stateRef.current.data.downloads.some((x: DownloadEntry) => same(x, titleId, episodeId));
           if (!stillWanted) {
             deleteLocalFile(r.localUri);
             return;
           }
           dispatch({ type: 'DOWNLOAD_DONE', titleId, episodeId, localUri: r.localUri, sizeMB: r.sizeMB, savedToDevice: r.savedToDevice });
-          showToast(r.savedToDevice ? `${title.name} saved to device storage (MythTube)` : `${title.name} downloaded`);
+          showToast(r.savedToDevice ? `${title.name} saved to device storage` : `${title.name} downloaded`);
         })
         .catch(() => {
-          if (stateRef.current.data.downloads.some((x) => same(x, titleId, episodeId))) {
+          if (stateRef.current.data.downloads.some((x: DownloadEntry) => same(x, titleId, episodeId))) {
             dispatch({ type: 'DOWNLOAD_FAILED', titleId, episodeId });
-            showToast('Download failed. Check your connection and try again.');
+            showToast('Download failed. Check connection.');
           }
         });
     },
@@ -256,35 +260,44 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   );
 
   const deleteDownload = useCallback((titleId: string, episodeId?: string) => {
-    const targets = stateRef.current.data.downloads.filter((x) => (episodeId === undefined ? x.titleId === titleId : same(x, titleId, episodeId)));
-    targets.forEach((x) => {
+    const targets = stateRef.current.data.downloads.filter((x: DownloadEntry) => (episodeId === undefined ? x.titleId === titleId : same(x, titleId, episodeId)));
+    targets.forEach((x: DownloadEntry) => {
       cancelDownload(downloadKey(x.titleId, x.episodeId));
       deleteLocalFile(x.localUri);
     });
     dispatch({ type: 'DOWNLOAD_REMOVE', titleId, episodeId });
   }, []);
 
+  const resetData = useCallback(() => {
+    dispatch({ type: 'RESET_DATA' });
+  }, []);
+
+  const signOut = useCallback(async () => {
+    dispatch({ type: 'RESET_DATA' });
+  }, []);
+
   const value = useMemo<AppContextValue>(() => {
-    const activeProfile: Profile | null = state.signedIn ? { id: MAIN_PROFILE_ID, name: state.userName || 'You', color: PROFILE_COLOR } : null;
+    const activeProfile: Profile = { id: MAIN_PROFILE_ID, name: state.userName || 'Cinator User', color: PROFILE_COLOR };
     return {
       state,
       activeProfile,
       profileData: state.data,
-      setDisplayName: (name) => dispatch({ type: 'SET_NAME', name }),
-      signOut: () => signOutAccount().catch(() => undefined),
+      setDisplayName: (name: string) => dispatch({ type: 'SET_NAME', name }),
+      signOut,
+      resetData,
       markCreditSeen: () => dispatch({ type: 'CREDIT_SEEN' }),
-      toggleMyList: (id) => dispatch({ type: 'TOGGLE_MY_LIST', id }),
-      rate: (id, rating) => dispatch({ type: 'RATE', id, rating }),
-      toggleReminder: (id) => dispatch({ type: 'TOGGLE_REMINDER', id }),
-      setProgress: (entry) => dispatch({ type: 'SET_PROGRESS', entry }),
-      removeProgress: (titleId) => dispatch({ type: 'REMOVE_PROGRESS', titleId }),
+      toggleMyList: (id: string) => dispatch({ type: 'TOGGLE_MY_LIST', id }),
+      rate: (id: string, rating: Rating | null) => dispatch({ type: 'RATE', id, rating }),
+      toggleReminder: (id: string) => dispatch({ type: 'TOGGLE_REMINDER', id }),
+      setProgress: (entry: ProgressEntry) => dispatch({ type: 'SET_PROGRESS', entry }),
+      removeProgress: (titleId: string) => dispatch({ type: 'REMOVE_PROGRESS', titleId }),
       startDownload,
       deleteDownload,
-      toggleSetting: (key) => dispatch({ type: 'TOGGLE_SETTING', key }),
+      toggleSetting: (key: keyof Settings) => dispatch({ type: 'TOGGLE_SETTING', key }),
       showToast,
-      clearToast: (id) => dispatch({ type: 'CLEAR_TOAST', id }),
+      clearToast: (id: number) => dispatch({ type: 'CLEAR_TOAST', id }),
     };
-  }, [state, startDownload, deleteDownload, showToast]);
+  }, [state, startDownload, deleteDownload, resetData, signOut, showToast]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

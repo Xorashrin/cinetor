@@ -4,14 +4,11 @@ import React from 'react';
 import AppSettingsScreen from '../screens/AppSettingsScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import DownloadsScreen from '../screens/DownloadsScreen';
-import LandingScreen from '../screens/LandingScreen';
 import LivePlayerScreen from '../screens/LivePlayerScreen';
 import MyListScreen from '../screens/MyListScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import PlayerScreen from '../screens/PlayerScreen';
 import SearchScreen from '../screens/SearchScreen';
-import SignInScreen from '../screens/SignInScreen';
-import SignUpScreen from '../screens/SignUpScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TitleScreen from '../screens/TitleScreen';
 import { colors } from '../theme/tokens';
@@ -28,13 +25,11 @@ export function RootNavigator() {
         headerShown: false,
         orientation: 'portrait_up',
         animation: 'slide_from_right',
+        animationDuration: 200,
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} options={{ animation: 'none' }} />
-      <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
-      <Stack.Screen name="SignIn" component={SignInScreen} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="Main" component={Tabs} options={{ animation: 'fade' }} />
       <Stack.Screen name="Title" component={TitleScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen

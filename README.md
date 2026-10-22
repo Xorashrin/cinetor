@@ -1,45 +1,28 @@
-# MythTube
+# Cinator
 
-A Netflix-style streaming app UI for Android (React Native + Expo SDK 58), with mock content and no backend.
-All titles, people and artwork are placeholders. Posters come from picsum.photos and videos from Google's public sample bucket.
+A Netflix-style streaming app UI for Android (React Native + Expo SDK 58), completely clean and blank without mock data or external APIs.
 
-## Build (GitHub Actions — nothing builds locally)
+## Tabs
+- **Home**: Curated main entertainment view.
+- **Anime**: Dedicated anime section with category filters (Shonen, Action, Fantasy, Romance, Sci-Fi).
+- **K-Drama**: Dedicated Korean drama section with filters (Romance, Thriller, Mystery, Comedy, Drama).
+- **Profiles**: Profile switcher, avatar management, My List, Downloads, and App Settings.
 
-1. Create an empty GitHub repository (for example `mythtube`).
-2. From this folder:
-   ```sh
-   git init
-   git add .
-   git commit -m "MythTube phase 1"
-   git branch -M main
-   git remote add origin https://github.com/<you>/mythtube.git
-   git push -u origin main
-   ```
-3. On GitHub, open **Actions → Android APK**. Each push to `main` runs it, and you can also start it from **Run workflow**.
-4. When the run finishes (about 15–25 min), download the **MythTube-apk** artifact (a zip containing `app-release.apk`).
-5. Copy the APK to your phone and open it. Allow "Install unknown apps" for your file manager if Android asks.
+## Build (GitHub Actions)
 
-The workflow runs `npm install`, then `expo install --fix`, then `tsc --noEmit`, then `expo prebuild`, then Gradle `assembleRelease` (arm64-v8a only).
-If the type check fails, the log shows the exact file and line.
+1. Pushing to `main` automatically triggers the `.github/workflows/android.yml` action.
+2. In your GitHub repository, open **Actions → Android APK**.
+3. When the build finishes, download the `cinator-apk` artifact.
+4. Install the release APK on your Android device.
 
-The release APK is signed with the default debug keystore from the Expo template. That's fine for sideloading, but not for the Play Store.
-
-## Try it
-
-- Sign in with any email and a password of 4 or more characters.
-- Pick a profile. You can then use Home, Games, New & Hot and My MythTube.
-- Data persists on the device: My List, ratings, reminders, watch progress and downloads (downloads are simulated).
-
-## Project layout
+## Project Layout
 
 ```
-App.tsx                 fonts, splash, providers, navigation container
-src/theme/tokens.ts     colors/spacing/type/motion (from REA evidence, docs/NETFLIX_A_TO_Z.md M01)
-src/data/               mock catalog + image URL builders
-src/state/AppState.tsx  app state + AsyncStorage persistence
-src/navigation/         root stack + bottom tabs
-src/components/         shared UI
-src/screens/            one file per screen
-tools/make_icons.py     regenerates assets/*.png
-docs/                   REA feature inventory, plan, progress
+App.tsx                 Fonts, splash, providers, navigation container
+src/theme/tokens.ts     Colors, spacing, typography, motion tokens
+src/data/               Data structures and types
+src/state/AppState.tsx  App state + AsyncStorage persistence
+src/navigation/         Root stack + bottom tabs (Home, Anime, K-Drama, Profiles)
+src/components/         Shared UI components
+src/screens/            Individual screen components
 ```

@@ -300,7 +300,7 @@ export default function TitleScreen({ navigation, route }: Props) {
                 </View>
               ) : null}
             </View>
-            <IconAction label="Share" icon="send-outline" onPress={() => Share.share({ message: `Check out "${title.name}" on MythTube` }).catch(() => undefined)} />
+            <IconAction label="Share" icon="send-outline" onPress={() => Share.share({ message: `Check out "${title.name}" on Cinator` }).catch(() => undefined)} />
           </View>
           {ratingOpen ? (
             <View style={styles.ratingLabels}>

@@ -117,9 +117,18 @@ export default function SearchScreen({ navigation }: Props) {
           initialNumToRender={10}
           windowSize={7}
           ListHeaderComponent={
-            <Txt weight="bold" size={18} style={styles.section}>
-              Recommended TV Shows & Movies
-            </Txt>
+            AVAILABLE.length > 0 ? (
+              <Txt weight="bold" size={18} style={styles.section}>
+                Recommended TV Shows & Movies
+              </Txt>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Txt size={14} color={colors.textDim} align="center">
+                Type in the search box to find shows, movies, and channels.
+              </Txt>
+            </View>
           }
           renderItem={renderRecommended}
         />

@@ -61,14 +61,14 @@ export default function AppSettingsScreen({ navigation }: Props) {
         <SettingRow icon="information-circle-outline" label="Playback Specification" onPress={notYet} />
 
         <SectionLabel>About</SectionLabel>
-        <SettingRow icon="phone-portrait-outline" label="Version" value="MythTube 1.0.0 (phase 1)" />
+        <SettingRow icon="phone-portrait-outline" label="Version" value="Cinator 1.0.0" />
         <SettingRow icon="document-text-outline" label="Open Source Licenses" onPress={notYet} />
         <SettingRow icon="shield-checkmark-outline" label="Privacy" onPress={notYet} />
         <SettingRow
-          icon="log-out-outline"
-          label="Sign Out"
+          icon="refresh-outline"
+          label="Reset Data"
           onPress={() => {
-            signOut().then(() => navigation.reset({ index: 0, routes: [{ name: 'Landing' }] }));
+            signOut().then(() => showToast('Data reset to defaults'));
           }}
         />
       </ScrollView>

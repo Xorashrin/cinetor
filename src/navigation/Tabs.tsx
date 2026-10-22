@@ -1,14 +1,14 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { View } from 'react-native';
 
 import { Avatar } from '../components/Avatar';
 import { CreditPopup } from '../components/CreditPopup';
+import AnimeScreen from '../screens/AnimeScreen';
 import HomeScreen from '../screens/HomeScreen';
-import MyNetflixScreen from '../screens/MyNetflixScreen';
-import NewHotScreen from '../screens/NewHotScreen';
-import TvScreen from '../screens/TvScreen';
+import KDramaScreen from '../screens/KDramaScreen';
+import ProfilesScreen from '../screens/ProfilesScreen';
 import { useApp } from '../state/AppState';
 import { colors, font } from '../theme/tokens';
 import type { TabParamList } from './types';
@@ -28,43 +28,50 @@ function ProfileTabIcon({ focused }: { focused: boolean }) {
 export function Tabs() {
   return (
     <>
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.textDim,
-        tabBarStyle: { backgroundColor: 'rgba(0,0,0,0.97)', borderTopWidth: 0, elevation: 0 },
-        tabBarLabelStyle: { fontFamily: font.medium, fontSize: 10 },
-        sceneStyle: { backgroundColor: colors.bg },
-      }}
-    >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} /> }}
-      />
-      <Tab.Screen
-        name="TV"
-        component={TvScreen}
-        options={{ tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'tv' : 'tv-outline'} size={25} color={color} /> }}
-      />
-      <Tab.Screen
-        name="NewHot"
-        component={NewHotScreen}
-        options={{
-          title: 'New & Hot',
-          tabBarIcon: ({ focused, color }) => (
-            <MaterialCommunityIcons name={focused ? 'play-box-multiple' : 'play-box-multiple-outline'} size={24} color={color} />
-          ),
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.text,
+          tabBarInactiveTintColor: colors.textDim,
+          tabBarStyle: { backgroundColor: 'rgba(0,0,0,0.97)', borderTopWidth: 0, elevation: 0 },
+          tabBarLabelStyle: { fontFamily: font.medium, fontSize: 10 },
+          sceneStyle: { backgroundColor: colors.bg },
         }}
-      />
-      <Tab.Screen
-        name="MyNetflix"
-        component={MyNetflixScreen}
-        options={{ title: 'My MythTube', tabBarIcon: ({ focused }) => <ProfileTabIcon focused={focused} /> }}
-      />
-    </Tab.Navigator>
-    <CreditPopup />
+      >
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />,
+          }}
+        />
+        <Tab.Screen
+          name="Anime"
+          component={AnimeScreen}
+          options={{
+            title: 'Anime',
+            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={24} color={color} />,
+          }}
+        />
+        <Tab.Screen
+          name="KDrama"
+          component={KDramaScreen}
+          options={{
+            title: 'K-Drama',
+            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'film' : 'film-outline'} size={24} color={color} />,
+          }}
+        />
+        <Tab.Screen
+          name="Profiles"
+          component={ProfilesScreen}
+          options={{
+            title: 'Profiles',
+            tabBarIcon: ({ focused }) => <ProfileTabIcon focused={focused} />,
+          }}
+        />
+      </Tab.Navigator>
+      <CreditPopup />
     </>
   );
 }

@@ -3,22 +3,19 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export type TabParamList = {
   Home: { genre?: string } | undefined;
-  TV: undefined;
-  NewHot: undefined;
-  MyNetflix: undefined;
+  Anime: { genre?: string } | undefined;
+  KDrama: { genre?: string } | undefined;
+  Profiles: undefined;
 };
 
 export type RootStackParamList = {
   Splash: undefined;
-  Landing: undefined;
-  SignIn: undefined;
-  SignUp: undefined;
   Main: NavigatorScreenParams<TabParamList> | undefined;
   Title: { id: string };
   Player: { id: string; episodeId?: string };
   Live: { channelId: string; filter?: string };
   Search: undefined;
-  Categories: { current?: string } | undefined;
+  Categories: { current?: string; targetTab?: 'Home' | 'Anime' | 'KDrama' } | undefined;
   MyList: undefined;
   Downloads: undefined;
   Notifications: undefined;
