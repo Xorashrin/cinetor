@@ -30,9 +30,6 @@ jobs:
       - name: Align native module versions with the Expo SDK
         run: npx expo install --fix
 
-      - name: Run engine unit and integration tests
-        run: npm run test:engine
-
       - name: Type check
         run: npx tsc --noEmit
 
@@ -95,7 +92,7 @@ jobs:
           echo "RELEASE_APK_SHA256=$SHA256" >> $GITHUB_ENV
 
           # Prepare direct download APK
-          cp "$APK_FILE" android/app/build/outputs/apk/release/cinetor-v1.0.1-release.apk
+          cp "$APK_FILE" android/app/build/outputs/apk/release/cinetor-v1.0.2-release.apk
 
       - uses: actions/upload-artifact@v5
         with:
@@ -106,23 +103,25 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.1
-          name: Cinator v1.0.1 Production Release
+          tag_name: v1.0.2
+          name: Cinator v1.0.2 Production Release
           body: |
-            ## Cinator v1.0.1 Production Release APK
-            - **Deliverable:** `cinetor-v1.0.1-release.apk`
+            ## Cinator v1.0.2 Production Release APK
+            - **Deliverable:** `cinetor-v1.0.2-release.apk`
             - **Package Name:** `com.cinator.app`
-            - **Version Code:** `2` (Version `1.0.1`)
+            - **Version Code:** `3` (Version `1.0.2`)
             - **Supported Architectures:** Universal (`arm64-v8a`, `armeabi-v7a`, `x86_64`)
             - **Signatures:** v1 (JAR signing), v2 (APK Signature Scheme v2), v3
-            - **BDIX Engine:** Background parsing, automatic sync, and fault-isolated indexing
+            - **Streamlined Profiles:** Profile switcher section removed; single unified active profile
+            - **Redesigned About Section:** Dedicated About screen with branding, credits, and GitHub repo access
+            - **Engine Cleanup:** BDIX parser engine completely removed for lightweight, rock-solid native streaming
             - **Feed Isolation:** Home (Movies/Series only), Anime, K-Drama, Live TV, Adult (18+ segregated)
             
             ### Installation Instructions
-            1. Download `cinetor-v1.0.1-release.apk` directly below.
+            1. Download `cinetor-v1.0.2-release.apk` directly below.
             2. If you previously had an older debug or test build installed, uninstall it first to prevent package signature conflicts.
             3. Tap the downloaded `.apk` file to install.
           files: |
-            android/app/build/outputs/apk/release/cinetor-v1.0.1-release.apk
+            android/app/build/outputs/apk/release/cinetor-v1.0.2-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

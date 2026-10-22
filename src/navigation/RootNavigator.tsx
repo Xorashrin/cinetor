@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
+import AboutScreen from '../screens/AboutScreen';
 import AppSettingsScreen from '../screens/AppSettingsScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import DownloadsScreen from '../screens/DownloadsScreen';
@@ -54,6 +55,7 @@ export function RootNavigator() {
       <Stack.Screen name="Downloads" component={DownloadsScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
     </Stack.Navigator>
   );
 }

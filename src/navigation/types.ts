@@ -22,6 +22,7 @@ export type RootStackParamList = {
   Downloads: undefined;
   Notifications: undefined;
   AppSettings: undefined;
+  About: undefined;
 };
 
 export type RootNav = NativeStackNavigationProp<RootStackParamList>;

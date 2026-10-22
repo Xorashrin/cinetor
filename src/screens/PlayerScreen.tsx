@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Txt } from '../components/Txt';
 import { img } from '../data/images';
 import { findEpisode, getTitle, nextEpisode } from '../data/mock';
-import { CatalogService } from '../engine/service/catalog-service';
 import type { RootStackParamList } from '../navigation/types';
 import { downloadFor, useApp } from '../state/AppState';
 import { colors, motion } from '../theme/tokens';
@@ -131,28 +130,24 @@ export default function PlayerScreen({ navigation, route }: Props) {
       const failedUrl = currentUrlRef.current;
       failedUrlsRef.current.add(failedUrl);
 
-      // Attempt verified multi-source failover on the same item/episode
-      CatalogService.getInstance()
-        .failoverSource(title.id, failedUrl, episode?.id)
-        .then((nextMirrorUrl) => {
-          if (nextMirrorUrl && !failedUrlsRef.current.has(nextMirrorUrl)) {
-            showToast('Switching to alternative verified playback mirror...');
-            currentUrlRef.current = nextMirrorUrl;
-            player.replace(nextMirrorUrl);
-            player.play();
-            isFailingOverRef.current = false;
-          } else {
-            // Exhausted all verified mirrors for this item
-            setPlaybackError('Unable to play title. All verified playback sources are currently unavailable.');
-            isFailingOverRef.current = false;
-          }
-        })
-        .catch(() => {
-          setPlaybackError('Playback error occurred. No alternative source available.');
-          isFailingOverRef.current = false;
-        });
+      // Check if title or episode has alternative playback mirrors configured
+      const candidateSources = (episode?.sources ?? title.sources ?? []).filter(
+        (s) => s.url && !failedUrlsRef.current.has(s.url)
+      );
+
+      if (candidateSources.length > 0) {
+        const nextMirrorUrl = candidateSources[0].url;
+        showToast('Switching to alternative playback mirror...');
+        currentUrlRef.current = nextMirrorUrl;
+        player.replace(nextMirrorUrl);
+        player.play();
+        isFailingOverRef.current = false;
+      } else {
+        setPlaybackError('Unable to play video. The media stream is currently unavailable.');
+        isFailingOverRef.current = false;
+      }
     }
-  }, [status, title.id, episode?.id, player, showToast]);
+  }, [status, title.sources, episode?.sources, player, showToast]);
 
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     setPosition(currentTime);

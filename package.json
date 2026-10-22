@@ -1,12 +1,11 @@
 {
   "name": "cinator",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "index.ts",
   "private": true,
   "scripts": {
     "start": "expo start",
     "typecheck": "tsc --noEmit",
-    "test:engine": "node --import ./test/registerHooks.mjs --test test/engine/*.test.ts",
     "prebuild:android": "expo prebuild --platform android --clean --no-install"
   },
   "dependencies": {
