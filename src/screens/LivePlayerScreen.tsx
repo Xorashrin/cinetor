@@ -58,7 +58,6 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
 
   const player = useVideoPlayer(null, (p) => {
     p.timeUpdateEventInterval = 1;
-    p.play();
   });
   const { isPlaying } = useEvent(player, "playingChange", {
     isPlaying: player.playing,

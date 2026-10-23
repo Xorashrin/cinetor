@@ -179,7 +179,6 @@ export default function PlayerScreen({ navigation, route }: Props) {
 
   const player = useVideoPlayer(null, (p) => {
     p.timeUpdateEventInterval = 0.5;
-    p.play();
   });
   const { isPlaying } = useEvent(player, "playingChange", {
     isPlaying: player.playing,
@@ -338,6 +337,7 @@ export default function PlayerScreen({ navigation, route }: Props) {
   });
 
   useEventListener(player, "playToEnd", () => {
+    if (resolving || latest.current.duration <= 0 || latest.current.position <= 0) return;
     if (next && state.settings.autoplayNext)
       navigation.replace("Player", { id: title.id, episodeId: next.id });
     else navigation.goBack();
