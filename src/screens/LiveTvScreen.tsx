@@ -243,7 +243,7 @@ export default function LiveTvScreen({ navigation }: Props) {
             removeClippedSubviews
             ListHeaderComponent={
               <Txt size={12} color={colors.textDim} style={styles.count}>
-                {channels.length} verified live channels available
+                {channels.length} channels in the directory
               </Txt>
             }
           />
