@@ -4,6 +4,7 @@ import * as ExpoNetwork from "expo-network";
 import { EngineLifecycle } from "./lifecycle";
 import {
   catalog,
+  liveDirectory,
   initializeEngine,
   scheduler,
   closeAdultSession,
@@ -15,8 +16,10 @@ export function useEngine(
 ): void {
   useEffect(() => {
     if (!essentialReady) return;
-    const unsubscribe = catalog.subscribe(() => notify(catalog.version));
-    notify(catalog.version);
+    const publishVersion = () => notify(catalog.version + liveDirectory.version);
+    const unsubscribe = catalog.subscribe(publishVersion);
+    const unsubscribeLive = liveDirectory.subscribe(publishVersion);
+    publishVersion();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const clear = () => {
       if (timer) clearTimeout(timer);
@@ -54,6 +57,7 @@ export function useEngine(
       app.remove();
       net.remove();
       unsubscribe();
+      unsubscribeLive();
     };
   }, [essentialReady, notify]);
 }

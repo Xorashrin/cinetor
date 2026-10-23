@@ -3,7 +3,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEvent, useEventListener } from "expo";
 import { StatusBar } from "expo-status-bar";
 import { useVideoPlayer, VideoView } from "expo-video";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -18,12 +18,12 @@ import { filterChannels, getChannel, neighbor } from "../data/channels";
 import { getAdultChannel } from "../data/adultChannels";
 import type { RootStackParamList } from "../navigation/types";
 import {
-  catalog,
-  resolver,
-  scheduler,
-  playbackSource,
+  reportPlayback,
+  liveSources,
+  verifiedLiveSource,
 } from "../engine/runtime";
 import { colors, motion } from "../theme/tokens";
+import { useApp } from "../state/AppState";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Live">;
 
@@ -31,6 +31,7 @@ const LOAD_TIMEOUT_MS = 15000;
 
 export default function LivePlayerScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const { catalogVersion } = useApp();
   const channel =
     getChannel(route.params.channelId) ||
     getAdultChannel(route.params.channelId);
@@ -43,22 +44,17 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
   );
   const sources = useMemo(
     () =>
-      channel
-        ? resolver.alternatives(
-            channel.id,
-            undefined,
-            undefined,
-            new Set(),
-            scheduler.adultAccess,
-          )
-        : [],
-    [route.params.channelId],
+      channel ? liveSources(channel.id) : [],
+    [route.params.channelId, catalogVersion],
   );
   const sourceUrls = sources.map((source) => source.url).join("|");
   const [sourceIndex, setSourceIndex] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const [visible, setVisible] = useState(true);
   const advancing = useRef(false);
+  const loadGeneration = useRef(0);
+  const request = useRef<AbortController | null>(null);
 
   const player = useVideoPlayer(null, (p) => {
     p.timeUpdateEventInterval = 1;
@@ -74,17 +70,45 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
   // A source that errors (or never becomes ready) falls through to the next working source.
   const indexRef = useRef(0);
   const decoded = useRef(new Set<string>());
-  useEffect(() => {
-    const first = sources[0];
-    if (!first) {
-      setFailed(true);
-      return;
+  const loadSource = useCallback(async (start: number, signal: AbortSignal) => {
+    const generation = ++loadGeneration.current;
+    advancing.current = true;
+    setResolving(true);
+    try {
+      for (let index = start; index < sources.length; index++) {
+        if (signal.aborted) return;
+        indexRef.current = index;
+        setSourceIndex(index);
+        try {
+          const ref = await verifiedLiveSource(sources[index], signal);
+          if (signal.aborted) return;
+          await player.replaceAsync(ref);
+          if (signal.aborted) return;
+          player.play();
+          setFailed(false);
+          return;
+        } catch {
+          if (signal.aborted) return;
+          if (channel) void reportPlayback(channel.id, sources[index].url, false).catch(() => undefined);
+        }
+      }
+      if (!signal.aborted) setFailed(true);
+    } finally {
+      if (generation === loadGeneration.current) {
+        advancing.current = false;
+        if (!signal.aborted) setResolving(false);
+      }
     }
-    void playbackSource(first.url, first.sourceId)
-      .then((ref) => player.replaceAsync(ref))
-      .then(() => player.play())
-      .catch(() => setFailed(true));
-  }, [sourceUrls, player]);
+  }, [sourceUrls, player, route.params.channelId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    request.current = controller;
+    indexRef.current = 0;
+    setSourceIndex(0);
+    setFailed(false);
+    void loadSource(0, controller.signal);
+    return () => controller.abort();
+  }, [loadSource]);
   useEventListener(player, "timeUpdate", ({ currentTime }) => {
     const source = sources[indexRef.current];
     if (
@@ -95,8 +119,7 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
       !decoded.current.has(source.url)
     ) {
       decoded.current.add(source.url);
-      void catalog
-        .reportPlayback(channel.id, source.url, true)
+      void reportPlayback(channel.id, source.url, true)
         .catch(() => undefined);
     }
   });
@@ -104,24 +127,10 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
     if (advancing.current || failed) return;
     const failedSource = sources[indexRef.current];
     if (channel && failedSource)
-      void catalog
-        .reportPlayback(channel.id, failedSource.url, false)
+      void reportPlayback(channel.id, failedSource.url, false)
         .catch(() => undefined);
-    const next = indexRef.current + 1;
-    if (next >= sources.length) {
-      setFailed(true);
-      return;
-    }
-    advancing.current = true;
-    indexRef.current = next;
-    setSourceIndex(next);
-    playbackSource(sources[next].url, sources[next].sourceId)
-      .then((ref) => player.replaceAsync(ref))
-      .then(() => player.play())
-      .catch(() => setFailed(true))
-      .finally(() => {
-        advancing.current = false;
-      });
+    const signal = request.current?.signal;
+    if (signal && !signal.aborted) void loadSource(indexRef.current + 1, signal);
   };
 
   useEventListener(player, "statusChange", ({ status: s }) => {
@@ -129,12 +138,12 @@ export default function LivePlayerScreen({ navigation, route }: Props) {
   });
 
   useEffect(() => {
-    if (status === "readyToPlay" || failed) return;
+    if (status === "readyToPlay" || failed || resolving) return;
     const timer = setTimeout(tryNextSource, LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
     // tryNextSource reads the latest state through setState; re-arm only when the source changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, sourceIndex, failed]);
+  }, [status, sourceIndex, failed, resolving]);
 
   useEffect(() => {
     if (!visible || !isPlaying) return;

@@ -1,0 +1,30 @@
+{
+  "apk_sha256": [
+    "b5dbde0140faa20b48da87e23e1ec2c0d45df7f84037df5b0c2f1948639da875",
+    "9d41ba2ae4da328491b2773580861f9b56cce06481ff97113ff96a159d90959d"
+  ],
+  "member_count": [
+    1922,
+    1922
+  ],
+  "only_first": [],
+  "only_second": [],
+  "changed": [
+    {
+      "first": {
+        "path": "assets/index.android.bundle",
+        "bytes": 3633844,
+        "compressed": 3633844,
+        "crc": "0x8fc4d80d",
+        "sha256": "f3dddcbe275c14d9bd896906da4c17883153648f6dc77e0cf5cf3503904728ab"
+      },
+      "second": {
+        "path": "assets/index.android.bundle",
+        "bytes": 3633888,
+        "compressed": 3633888,
+        "crc": "0x1eed369d",
+        "sha256": "0ff94aac96b3db055859e44050502113b18077cc074841ac5a45d6b03a9abc16"
+      }
+    }
+  ]
+}

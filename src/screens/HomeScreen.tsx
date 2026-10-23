@@ -83,7 +83,7 @@ export default function HomeScreen({ route, navigation }: Props) {
                 showToast(inMyList ? 'Removed from My List' : 'Added to My List');
               }}
             />
-            {TOP10_TV.length > 0 && !genre ? <Top10Row title="Top 10 Today" items={TOP10_TV} onPressTitle={openTitle} /> : null}
+            {(filter === 'movies' ? TOP10_MOVIES : TOP10_TV).length > 0 && !genre ? <Top10Row title="Top 10 Today" items={filter === 'movies' ? TOP10_MOVIES : TOP10_TV} onPressTitle={openTitle} /> : null}
             {pool.length > 1 ? <PosterRow title={genre ? `${genre} Content` : 'Trending Now'} items={pool.slice(1)} onPressTitle={openTitle} /> : null}
           </>
         ) : (
@@ -98,7 +98,7 @@ export default function HomeScreen({ route, navigation }: Props) {
               Welcome, {name}
             </Txt>
             <Txt size={13} color={colors.textDim} align="center" style={styles.emptySubtitle}>
-              Clean streaming home ready. Movies and series will appear here once discovered and verified.
+              Movies and series are loading. Browse Search to find a title.
             </Txt>
 
             <View style={styles.actionGrid}>

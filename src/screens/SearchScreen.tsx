@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
-import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { FlatList, Keyboard, Pressable, StyleSheet, TextInput, View, useWindowDimensions, type ListRenderItem } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChannelLogo } from '../components/ChannelLogo';
+import { Chip } from '../components/Chip';
+import { searchTitles, type SearchSort } from '../providers/search';
 import { Poster } from '../components/Poster';
 import { Txt } from '../components/Txt';
 import { img } from '../data/images';
@@ -13,6 +15,7 @@ import { searchChannels } from '../data/channels';
 import { AVAILABLE, type Title } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 import { useApp } from '../state/AppState';
+import { catalog } from '../engine/runtime';
 import { colors, font, radius } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Search'>;
@@ -22,29 +25,21 @@ export default function SearchScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const { showToast, catalogVersion } = useApp();
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SearchSort>('relevance');
   // Typing stays responsive; result rendering runs at a lower priority.
   const deferred = useDeferredValue(query);
 
-  const index = useMemo(
-    () =>
-      AVAILABLE.filter((t) => t.maturity !== '18+' && !t.genres.includes('Adult (18+)')).map((t) => ({
-        title: t,
-        haystack: [t.name, ...t.genres, ...t.cast, ...t.moods, ...t.creators].join('|').toLowerCase(),
-      })),
-    [catalogVersion],
-  );
-
-  const results = useMemo(() => {
-    const q = deferred.trim().toLowerCase();
-    if (!q) return [];
-    const terms = q.split(/\s+/).filter(Boolean);
-    return index
-      .filter((e) => terms.every((term) => e.haystack.includes(term)))
-      .sort((a, b) => Number(b.title.name.toLowerCase().startsWith(q)) - Number(a.title.name.toLowerCase().startsWith(q)))
-      .map((e) => e.title);
-  }, [deferred, index]);
+  const results = useMemo(() => deferred.trim() ? searchTitles(AVAILABLE, deferred, sort) : [], [deferred, sort, catalogVersion]);
 
   const channels = useMemo(() => searchChannels(deferred, 12), [deferred, catalogVersion]);
+  useEffect(() => {
+    if (query.trim().length < 2) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void catalog.search(query, controller.signal).catch(() => undefined);
+    }, 350);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [query]);
   const hasQuery = deferred.trim().length > 0;
   const cell = Math.floor((width - 24 - 16) / 3);
 
@@ -105,11 +100,15 @@ export default function SearchScreen({ navigation }: Props) {
             <Ionicons name="close" size={20} color={colors.textMuted} />
           </Pressable>
         ) : (
-          <Pressable hitSlop={8} onPress={() => showToast('Voice search is not part of this demo')}>
+          <Pressable hitSlop={8} onPress={() => showToast('Type a title, genre, actor, or director to search')}>
             <Ionicons name="mic" size={20} color={colors.textMuted} />
           </Pressable>
         )}
       </View>
+
+      {hasQuery ? <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingBottom: 12 }}>
+        {(['relevance', 'newest', 'rating', 'title'] as const).map(value => <Chip key={value} label={{ relevance: 'Best Match', newest: 'Newest', rating: 'Rating', title: 'A–Z' }[value]} selected={sort === value} onPress={() => setSort(value)} />)}
+      </View> : null}
 
       {!hasQuery ? (
         <FlatList

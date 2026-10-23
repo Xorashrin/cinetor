@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import { MAIN_PROFILE_ID, PROFILE_COLOR, findEpisode, getTitle, type Profile } from '../data/mock';
+import * as ExpoNetwork from 'expo-network';
+import { resolvePlayback } from '../engine/runtime';
 import { useEngine } from '../engine/useEngine';
 import { cancelDownload, deleteLocalFile, downloadKey, downloadVideo } from '../services/downloads';
 
@@ -262,19 +264,24 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const startDownload = useCallback(
     (titleId: string, sizeMB: number, episodeId?: string) => {
       const title = getTitle(titleId);
-      const url = episodeId ? findEpisode(title, episodeId)?.episode.video ?? title.video : title.video;
-      if (!url) {
-        showToast('No video available to download');
-        return;
-      }
       dispatch({ type: 'DOWNLOAD_START', titleId, episodeId, sizeMB });
       let last = 0;
-      downloadVideo(downloadKey(titleId, episodeId), url, (ratio) => {
+      void (async () => {
+        if (stateRef.current.settings.wifiOnly) {
+          const network = await ExpoNetwork.getNetworkStateAsync();
+          if (network.type !== ExpoNetwork.NetworkStateType.WIFI) throw new Error('Connect to Wi-Fi to download');
+        }
+        const refs = await resolvePlayback(titleId, episodeId);
+        const source = refs.find(ref => ref.downloadable);
+        if (!source) throw new Error('This provider does not offer a downloadable video');
+        if (!stateRef.current.data.downloads.some((x: DownloadEntry) => same(x, titleId, episodeId))) throw new Error('Download canceled');
+        return downloadVideo(downloadKey(titleId, episodeId), source.url, (ratio) => {
         if (ratio - last >= 0.02 || ratio >= 1) {
           last = ratio;
           dispatch({ type: 'DOWNLOAD_PROGRESS', titleId, episodeId, progress: ratio });
         }
-      })
+        }, source.headers);
+      })()
         .then((r) => {
           const stillWanted = stateRef.current.data.downloads.some((x: DownloadEntry) => same(x, titleId, episodeId));
           if (!stillWanted) {
@@ -284,10 +291,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'DOWNLOAD_DONE', titleId, episodeId, localUri: r.localUri, sizeMB: r.sizeMB, savedToDevice: r.savedToDevice });
           showToast(r.savedToDevice ? `${title.name} saved to device storage` : `${title.name} downloaded`);
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           if (stateRef.current.data.downloads.some((x: DownloadEntry) => same(x, titleId, episodeId))) {
             dispatch({ type: 'DOWNLOAD_FAILED', titleId, episodeId });
-            showToast('Download failed. Check connection.');
+            showToast(error instanceof Error ? error.message : 'Download failed. Check your connection.');
           }
         });
     },

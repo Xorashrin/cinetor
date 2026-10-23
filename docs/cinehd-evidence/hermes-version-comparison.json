@@ -1,0 +1,16 @@
+{
+  "strings": {
+    "first": 29799,
+    "second": 29799,
+    "removed": [
+      "https://api.themoviedb.org/3"
+    ],
+    "added": [
+      "https://autoembed.app/aproxy/proxy.php?url=https://api.themoviedb.org/3"
+    ]
+  },
+  "functions": {
+    "first": 19485,
+    "second": 19485
+  }
+}

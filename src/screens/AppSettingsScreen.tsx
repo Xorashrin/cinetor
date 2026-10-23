@@ -78,7 +78,7 @@ export default function AppSettingsScreen({ navigation }: Props) {
         <SettingRow
           icon="information-circle-outline"
           label="About Cinator"
-          value="v1.0.3 (Release)"
+          value="v1.1.0 (Release)"
           onPress={() => navigation.navigate('About')}
         />
         <SettingRow icon="document-text-outline" label="Open Source Licenses" onPress={() => navigation.navigate('About')} />

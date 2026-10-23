@@ -62,10 +62,7 @@ export default function LiveTvScreen({ navigation }: Props) {
   const adultTitles = useMemo(
     () =>
       adultUnlocked && scheduler.adultAccess
-        ? catalog
-            .query("adult", true)
-            .filter((r) => r.kind !== "channel")
-            .map(toTitle)
+        ? []
         : [],
     [adultUnlocked, catalogVersion],
   );

@@ -1,64 +1,14 @@
-# MythTube — Plan (Netflix A-to-Z UI clone)
+# Cinetor CineHD Implementation Plan
 
-App name: **MythTube** (suggested package `com.mythbrix.mythtube`).
-Scope: Netflix Android UI, buttons, navigation, styling, colors and feature
-shell; mock content; no backend.
+1. Compare both supplied APKs with REA archive evidence and offline Hermes analysis. Preserve hashes, request contracts, advertising findings, and analysis limits.
+2. Load metadata independently from native media. Use the second APK's observed public metadata proxy without a copied API key. Support a future project credential through build configuration.
+3. Replace previous JSON/directory/M3U discovery and cached source configuration with CineHD metadata, AWSIND native resolution, and the APK-observed IPTV directory.
+4. Preserve React Native, Expo, Reanimated, theme colors, typography, layout, navigation, and native player. Connect debounced remote search, sorting, details, artwork, seasons, and episodes.
+5. Resolve only native media; validate bounded manifests/segments or MP4 headers. Keep browser embed pages and all ad SDKs outside the app. Preserve play/pause/seek, restore progress, use actual audio/subtitle tracks, add source selection, and support MP4 and finite HLS offline downloads with request headers.
+6. Verify TypeScript, deterministic provider tests, live metadata/search/details/episodes, public registry, IPTV directory, and bounded media resolution. State external provider and device limitations.
+7. Create the requested GitHub repository, push verified code, run Android Actions, inspect the resulting APK and publish build evidence.
+8. Deliver a Markdown report covering completed behavior, evidence, limitations, and repository/APK links.
 
-## Hard constraint: nothing builds on this PC
+## Verification policy
 
-This PC has 3.6 GB RAM (about 0.8 GB free) and an i3-7100U, so:
-- No `npm install`, Metro/Expo dev server, Gradle, JDK, Android SDK, emulator or JADX here.
-- This PC is used only for writing code and markdown, plus small read-only analysis scripts.
-- All builds run in the cloud. The finished APK is installed straight onto the phone.
-
-## Phase 1 — REA evidence (done, static)
-
-Output: `docs/NETFLIX_A_TO_Z.md` (feature inventory with IDs) and `docs/rea-evidence/`.
-- REA `inspect-artifact` on Netflix 9.87.1 (archive inventory, hash-verified).
-- `resources.arsc` decoded read-only: English strings, colors, dimens, integers.
-- Manifest string pool: activities, deep links, permissions.
-- Lottie animations, fonts and the Hawkins design system identified.
-
-Optional Phase 1b: connect a phone and use REA `capture-adb-screen` and
-`inspect-adb-display` (lightweight, nothing builds) to screenshot each Netflix
-screen and confirm the [K] items and pixel layout.
-
-## Phase 2 — Scope decision (waiting on you)
-
-You mark the feature IDs to remove in `docs/NETFLIX_A_TO_Z.md`. I then freeze `docs/SCOPE.md`.
-
-## Phase 3 — Write code (on this PC, no build)
-
-Stack: Expo SDK 58 / React Native 0.88 / TypeScript, React Navigation,
-Reanimated, expo-image, expo-video, expo-linear-gradient, expo-blur,
-react-native-svg, lottie-react-native (with our own original animations).
-
-```
-src/theme/tokens.ts     colors, spacing, type, motion (from M01 evidence)
-src/data/mock.ts        titles, rows, episodes, profiles, games, notifications
-src/components/         Billboard, PosterRow, Top10Row, ContinueRow, Chip,
-                        Button, BottomSheet, IconButton, Toast, Logo
-src/screens/            one file per kept module (M02…M20)
-src/navigation/         RootStack + Tabs
-src/state/              profiles, My List, ratings, downloads, reminders (in-memory + AsyncStorage)
-```
-
-Performance target is 60fps on a mid-range Android phone:
-- memoized rows and horizontal FlatLists with `getItemLayout`
-- small fixed-size images through expo-image
-- scroll animations as Reanimated worklets
-- Hermes and the New Architecture
-
-## Phase 4 — Cloud build and checks
-
-- **GitHub Actions** (free; needs a GitHub repo): runs `tsc`, lint and
-  `expo prebuild` + Gradle `assembleRelease` on GitHub's servers, then uploads
-  `MythTube.apk` as a downloadable artifact.
-- Alternative: **EAS Build** (free tier; needs an expo.dev account).
-- Install: download the APK on the phone and tap to install.
-- Every push triggers a new build. Type errors are caught in CI, not locally.
-
-## Phase 5 — Parity pass
-
-Compare MythTube against Netflix screen by screen on the phone (Phase 1b
-screenshots if available), fix spacing, color and motion deltas, then rebuild in CI.
+Planning: compact recovery of the previous implementation. Context: dependency. Verification: impact, live integration, Android bundle, and release artifact. Delegation: none in the resumed session. Write scope: this project and local release artifacts. Existing UI appearance is preserved by leaving theme, shared visual components, and navigation unchanged. Legacy tracked files remain recoverable in Git history.

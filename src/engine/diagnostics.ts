@@ -1,4 +1,11 @@
-import type { ErrorCode, SourceState } from "./model";
+import type { ErrorCode } from "./model";
+interface ProviderState {
+  status: "idle" | "running" | "completed" | "failed";
+  lastSuccess?: number;
+  lastError?: ErrorCode;
+  nextEligible?: number;
+  failures: number;
+}
 export interface Metrics {
   state: "idle" | "initializing" | "running" | "completed" | "failed";
   mode: "foreground" | "background" | null;
@@ -18,7 +25,7 @@ export interface Metrics {
   unverified: number;
   unreachable: number;
   lastError?: ErrorCode;
-  sources: Record<string, SourceState>;
+  sources: Record<string, ProviderState>;
   background: "unregistered" | "registered" | "unavailable" | "failed";
   invalidConfiguration: number;
 }
@@ -55,8 +62,7 @@ export class Diagnostics {
     for (const fn of this.listeners) fn();
   }
   snapshot(): Metrics {
-    // Scheduling checkpoints contain URLs internally. Export only safe timing/outcome fields.
-    const sources: Record<string, SourceState> = {};
+    const sources: Record<string, ProviderState> = {};
     for (const [id, s] of Object.entries(this.value.sources))
       sources[id] = {
         status: s.status,

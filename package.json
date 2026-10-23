@@ -1,13 +1,14 @@
 {
   "name": "cinator",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "main": "index.ts",
   "private": true,
   "scripts": {
     "start": "expo start",
     "typecheck": "tsc --noEmit",
     "prebuild:android": "expo prebuild --platform android --no-install",
-    "test": "tsx --test test/engine/*.test.ts"
+    "test": "tsx --test test/providers/*.test.ts",
+    "test:live": "tsx tools/verify_providers.ts"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
@@ -43,6 +44,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/node": "^24.19.2",
     "@types/react": "~19.3.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"

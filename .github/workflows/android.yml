@@ -28,7 +28,7 @@ jobs:
           java-version: 17
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
-      - name: Verify engine and SDK compatibility
+      - name: Verify providers, offline downloads, and SDK compatibility
         run: |
           npm run typecheck
           npm test
@@ -42,14 +42,14 @@ jobs:
       - name: Sign and inspect release deliverable
         run: |
           mkdir -p builds/release
-          cp android/app/build/outputs/apk/release/app-release.apk builds/release/cinetor-v1.0.3-release.apk
+          cp android/app/build/outputs/apk/release/app-release.apk builds/release/cinetor-v1.1.0-release.apk
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
           # Expo defaults to its development certificate. This is a release variant,
           # but is explicitly NOT a privately signed distribution release.
-          "$APKSIGNER" sign --ks android/app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true builds/release/cinetor-v1.0.3-release.apk
-          python3 tools/verify_apk.py builds/release/cinetor-v1.0.3-release.apk --commit "$GITHUB_SHA" --output builds/release/release-evidence.json
+          "$APKSIGNER" sign --ks android/app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true builds/release/cinetor-v1.1.0-release.apk
+          python3 tools/verify_apk.py builds/release/cinetor-v1.1.0-release.apk --commit "$GITHUB_SHA" --output builds/release/release-evidence.json
           cd builds/release
-          sha256sum cinetor-v1.0.3-release.apk > SHA256SUMS
+          sha256sum cinetor-v1.1.0-release.apk > SHA256SUMS
       - uses: actions/upload-artifact@v5
         with:
           name: cinetor-android-release
@@ -59,21 +59,21 @@ jobs:
       - name: Publish commit-bound APK download
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.3
+          tag_name: v1.1.0
           target_commitish: ${{ github.sha }}
-          name: Cinetor v1.0.3 Android release variant
+          name: Cinetor v1.1.0 Android release variant
           body: |
-            Modular catalog discovery engine with scoped HTTP(S) JSON, HTML directory,
-            M3U and direct-media adapters. Source configuration starts empty; supply
-            authorized endpoints before live discovery. No real-source scans are claimed.
-            Android scheduled refresh uses Expo BackgroundTask / WorkManager.
+            CineHD metadata and provider integration with native ad-free navigation.
+            Metadata/search/details/episodes use the observed public metadata proxy.
+            Native AWSIND resolver and IPTV directory replace the previous sources.
+            Native source selection and MP4/finite HLS offline downloads are included.
 
-            Built from commit ${{ github.sha }}. Package com.cinator.app, version 1.0.3 (4).
+            Built from commit ${{ github.sha }}. Package com.cinator.app, version 1.1.0 (5).
             Universal arm64-v8a / armeabi-v7a / x86_64 release variant with embedded Hermes bundle.
-            Signed with Android's debug certificate: private distribution signing is NOT configured.
-            Device startup/playback/background execution are NOT VERIFIED by this workflow.
-            See release-evidence.json and SHA256SUMS for inspected artifact metadata.
+            Signed with Android's debug certificate; private distribution signing is not configured.
+            Actual provider/device playback availability is documented in docs/CINEHD_IMPLEMENTATION_REPORT.md.
+            See release-evidence.json and SHA256SUMS for artifact verification.
           files: |
-            builds/release/cinetor-v1.0.3-release.apk
+            builds/release/cinetor-v1.1.0-release.apk
             builds/release/release-evidence.json
             builds/release/SHA256SUMS

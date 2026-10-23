@@ -1,19 +1,20 @@
-# Release verification evidence
+# Cinetor CineHD Verification
 
-Rebuild baseline: clean main at c75d375e75f7a5ad382a896cdf72e1b8a2fafaeb. Baseline TypeScript passed; previous tests were removed (0 runnable project tests).
+The previous BDIX verification claims are superseded by the CineHD replacement. Run these checks from the project root:
 
-Verification uses the repository test runner, compiler, Expo checks, native build and artifact inspection. The gravitas CLI is installed, but this work reports actual project-validator results rather than claiming a Gravitas-owned completion gate. Conditional reviewer delegation was attempted; the reviewer stream failed repeatedly and supplied no usable independent review. No independent-review pass is claimed.
+```sh
+npm run typecheck
+npm test
+npm run test:live
+npx expo install --check
+npx expo-doctor
+npx expo export --platform android --output-dir builds/cinehd-bundle
+```
 
-Automated coverage includes JSON, malformed HTML, M3U, direct metadata, Unicode paths, invalid source scope/auth, private-network opt-in, no arbitrary-host redirects, bounded reads, request/body timeout, ignored abort, simulated ISP/DNS/connectivity changes, retries/jitter/exhaustion, cache preservation, five feed boundaries, age-gated restricted source suppression, duplicate schedules, process leases, checkpoint resume, migration/corrupt cache backup recovery, mirror/edition/episode grouping, strict MP4/HLS verification and player-health resolver behavior. The HTTP integration test uses an explicitly authorized loopback server and real sockets. It is not a BDIX live-server test and uses Node's fetch as injected transport; production uses Expo's native streaming fetch.
+The deterministic suite has 30 tests covering metadata/proxy encoding, independent cancellation, timeouts/body bounds, persistence, feed classification, current live directory schemas, source ranking, native playlist/movie/episode resolution, transport rejection, search sorting, finite HLS packaging, alternate audio, keys, concurrency, failure cleanup, and cancellation.
 
-Local results: 121 tests passed, 0 failed; TypeScript passed; Expo SDK dependency check passed; Expo Doctor 20/20 passed; diff whitespace check passed.
+Live results are recorded in [live-verification.json](cinehd-evidence/live-verification.json): 78 initial titles, 22 Anime titles, 21 K-Drama titles, 45 registry providers, 1,000 channel candidates, movie search/details/cast, eight TV seasons with episode artwork, three transport-verified HLS language sources, offline cache hydration, and a complete local HLS package plan. Directory rows are candidates, not verified live channels. The sampled HLS plan contains 2 playlists and 2,159 resources.
 
-Validated production Hermes export and native prebuild; package com.cinator.app, version 1.0.3, versionCode 4. Final GitHub Actions verifies the tests/SDK, runs assembleRelease for arm64-v8a/armeabi-v7a/x86_64, signs the deliverable using the existing Android debug certificate and inspects manifest/package/version/signatures/bundle/architecture/hash. release-evidence.json contains the exact GITHUB_SHA. Artifact is cinetor-android-release. No private distribution signing is configured.
+Expo compatibility checks passed: dependencies are current and Expo Doctor passed 20/20 checks. Android bundle export is a separate validator from the Gradle build. GitHub Actions builds the release, verifies version 1.1.0 (5), checks all three architectures and the embedded Hermes bundle, verifies signing schemes, and rejects debuggable APKs. Downloaded artifacts must match `SHA256SUMS` and the source commit in `release-evidence.json`.
 
-NOT VERIFIED: physical ISP/BDIX routing, authorized external source scans (no URLs supplied), Android device/emulator startup, decoder playback, OS background execution timing, device offline/feed/age-gate behavior. adb devices returned an empty device list; local Java/Android SDK was unavailable, so Gradle release build runs in GitHub Actions. Android WorkManager connectivity and task restoration were inspected in the installed Expo native source; mocked lifecycle tests do not prove OS execution.
-
-Security audit (2026-10-22): npm reports 19 high-severity dependency findings cascading from braces <=3.0.3 (GHSA-vfj7-8cjw-p6xm) and node-forge <=1.4.0 (GHSA-86w9-cpqp-85rv) in existing Expo/React Native tooling. npm view reports braces 3.0.3 and node-forge 1.4.0 as latest; no patched published versions exist in this registry. Audit suggestions downgrade core Expo/React Native incompatibly and were not applied. This is an unresolved toolchain limitation, not a clean security audit. Remote media parsers do not invoke those packages, glob downloaded patterns, or verify downloaded RSA signatures.
-
-No source response, source success or deployed APK runtime claim is fabricated. An empty configured registry keeps feeds empty and diagnostics idle/zero. The historical channels.json remains preserved on disk but its unversioned historical entries are not silently promoted through the new strict publication gate; configure an authorized playlist to repopulate Live TV. Fabricated Adult sample-video entries were removed. Existing screen layouts, profile/startup failsafes, downloads and navigation were preserved.
-
-Inspect docs/SOURCE_CONFIGURATION.md for scope and DNS-rebinding limits, supported formats, authentication provisioning, verification evidence limits, cached stale content and Android deferral constraints.
+Android device playback, complete movie downloads/local playback, device media export, audio/subtitle switching, and actual background execution require runtime checks. No Android device was connected during the local verification. Provider uptime and all-title stream coverage are external limitations.

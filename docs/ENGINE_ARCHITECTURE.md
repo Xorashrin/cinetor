@@ -1,38 +1,35 @@
-# Cinetor catalog engine rebuild
+# Cinetor CineHD Architecture
 
-## Reconnaissance (2026-10-22)
+## Replacement and preserved UI
 
-Baseline: `c75d375e75f7a5ad382a896cdf72e1b8a2fafaeb`, clean main; TypeScript passes. No tests remain. Expo 58 / React Native 0.88 / Hermes / expo-video. App renders without awaiting fonts or profile storage, with 1s/1.8s splash failsafes. Preserve those. Screen layouts consume empty mutable arrays in `data/mock.ts`; catalogVersion and playback source references survive. Live TV is bundled separately; Adult contains fabricated sample-video channels, which must be retired.
+The user superseded the previous BDIX work and requested the CineHD contracts from two supplied APKs. The prior implementation remains recoverable in Git history. This release removes its source registry, directory parsers, network scanner, verification catalog, and legacy tests from the active app.
 
-The removal commit explicitly requests a lightweight blank application; it does not document a crash root cause. Inspection of its parent reveals concrete defects: fictitious automatically seeded `.internal`/`.local` sources, an FTP adapter without native transport, timers presented as background scheduling, extension fallback after an inconclusive media signature, and an unbounded arrayBuffer fallback. None of those behaviors will be restored. Old cache records lack trustworthy verification evidence and will not be promoted to the new catalog.
+Theme tokens, typography, shared visual components, React Native/Expo stack, and navigation retain their existing design. Screen changes connect real provider data and native controls.
 
-## Decision and scope
+## Modules
 
-Policy: planning=deep, context_depth=dependency, verification_depth=full, delegation=conditional reviewer; reasons=engine rebuild, stateful persistence, network safety, native scheduling, production release. Write scope: src/engine, catalog/UI integration in src/data/src/state/src/screens, index.ts, app.json, dependency manifest/lock, tests, docs, release workflow/tools. Keep navigation, startup failsafes, downloads and feed designs.
+| Module | Responsibility |
+| --- | --- |
+| `src/providers/client.ts` | TMDB/proxy request construction, two-request concurrency, independent cancellation, cache, body/timeout limits. |
+| `src/providers/metadata.ts` | Metadata mapping, persistent catalog, classification, on-demand detail/season loading. |
+| `src/providers/search.ts` | Unicode normalization, matching, relevance/newest/rating/title ordering. |
+| `src/providers/request.ts` | Public HTTPS validation, redirects, bounded reads, timeout/cancellation. |
+| `src/providers/streams.ts` | Domain discovery, ephemeral playlist contracts, MP4/HLS transport probes, mirrors and recent failure suppression. |
+| `src/providers/registry.ts` | Observed embed registry metadata; never passes browser pages to native playback. |
+| `src/providers/live.ts` | Current IPTV directory mapping, candidate ranking, separate persistent snapshot and request headers. |
+| `src/providers/offline.ts` | Local HLS manifest planning and a bounded three-worker resource queue. |
+| `src/services/downloads.ts` | Native file transfer, cancellation, cleanup, HLS packaging, and MP4 device export. |
+| `src/engine/runtime.ts` | Shared providers, UI catalog publishing, independent refresh outcomes, playback adapters. |
+| `src/engine/useEngine.ts` | Nonblocking startup, app/network lifecycle, metadata/live subscriptions, background registration. |
 
-The user explicitly authorizes implementation, safe schema migration, Android release configuration, commit and push to main. No destructive legacy-cache migration, force push or credential changes are needed. Release risk: native-module/version incompatibility or misleading signing claims. Mitigation: Expo validation, locked dependency install, regenerate native project, release build and APK inspection; label the existing debug-certificate signing accurately unless private distribution signing is supplied.
+## Startup and playback
 
-## Minimal complete architecture
+App/font/state failsafes render navigation independently of provider refresh. Cached metadata and live channels load without a complete scan. Providers refresh independently; a failed registry or live endpoint does not erase successful metadata. A canceled refresh remains eligible when the app returns online.
 
-- `model.ts`: versioned internal records, source policy, stage and verification contracts.
-- `sources.ts` + `config/sources.json`: persistent validated allowlist; no default endpoints, secrets or host scanning. HTTP(S) JSON catalogs, one-level HTML directory pages, M3U playlists and explicit direct references. FTP/FTPS and arbitrary XML are unsupported.
-- `security.ts`: origin/path scopes, private-address opt-in, credential-free URLs, safe manual redirects, safe artwork, endpoint-free diagnostics.
-- `network.ts`: injected streaming transport (Expo native fetch in production), connectivity, absolute request deadline, bounded reads, cancellation, backoff/jitter and per-source pacing.
-- `parsers.ts`, `metadata.ts`, `classifier.ts`: independent validated parsers, Unicode normalization, explicit metadata first, conservative categories and deterministic content/episode identities. Mirrors merge only with matching trusted identity or complete edition metadata.
-- `verifier.ts`: bounded byte-range MP4 signature or HLS manifest plus bounded child/segment probe. Never publish from an extension or listing; unsupported/DRM manifests stay unverified. This is transport/container evidence, not a guarantee of codec decoding. Actual player failures mark source health and trigger same-content fallback.
-- `catalog.ts`: versioned journaled AsyncStorage snapshot with backup recovery, incremental upsert, stable identity, verified-only feed queries. Legacy cache remains untouched. User-facing content never contains source records.
-- `resolver.ts`: healthy verified same-content/episode mirrors, temporary player failure cooldown.
-- `scheduler.ts`: eligible per-source refresh/circuit cooldown, bounded foreground/background batches, persisted checkpoints and lease for interrupted process recovery; no overlapping runs.
-- `diagnostics.ts`: sanitized stage/outcome counts and source IDs/error codes only.
-- `background.ts`: module-scope Expo TaskManager definition and Expo BackgroundTask registration (Android WorkManager, connectivity constraint), bounded restartable scans. OS deferral/force-stop limitations apply.
-- `runtime.ts`, `ui.ts`, `lifecycle.ts`: singleton dependency composition, cache publication before discovery, AppState foreground/resume and connectivity wakeup, screen-independent execution. No parser tab. Development-only settings diagnostics.
+Title playback resolves only native streams. The resolver fetches an IMDb-based page, extracts the per-response playlist values, and returns independently probed source choices. The player preserves position and play/pause state when switching sources, reports decoder failures, and tries other cached alternatives. A live channel tries candidate mirrors sequentially and aborts pending verification on navigation.
 
-## Persistence and publication
+Metadata stays separate from media URLs, so posters/search/detail pages remain responsive while streams resolve. Normal navigation does not display raw endpoints, CSRF tokens, source filenames, or parser diagnostics.
 
-Separate source configuration, scheduling state and content snapshots. Valid updates commit incrementally; refresh failures do not delete previous content. Corrupt primary loads backup; invalid records are skipped. Secret references resolve from SecureStore at request/player time; never persist authentication headers. Publication requires explicit kind/category, clean title, episode coordinates for series, and verified transport evidence. General adult-like metadata is rejected; restricted sources require configured age/access approval and legal-content attestation, and run only after the app's age gate for that session. Restricted content stays out of general search and feeds.
+## Verification boundaries
 
-No configured authorized BDIX endpoints currently exist. A successful empty initialization is not a successful source scan. Live-source and device checks are separate from deterministic fixture tests and remain NOT VERIFIED unless actually executed.
-
-## Verification contract
-
-Test parser malformed/Unicode/scope cases; timeout/cancellation/retry/ISP variation; strict gate, dedupe/edition/episode identity; cache corruption/migration/partial failures; lifecycle overlap/registration/interruption; all five feed boundaries. Run typecheck, tests, Expo dependency and doctor checks, production bundle, native release workflow, APK manifest/signatures/hash inspection. Install/run only if adb provides a device. Report exact commit/run/artifact and all unavailable runtime checks.
+The registry's 45 browser providers are not 45 native playback adapters. Sports, drama scrapers, radio, external subtitle credentials, and a native adult catalog are not reconstructed in this release. Native media uses the recovered AWSIND path; its coverage and availability vary by title/language/network. Android WorkManager controls actual background scheduling. Unit tests do not establish device or OS behavior.

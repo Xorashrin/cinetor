@@ -1,0 +1,87 @@
+{
+  "observedAt": "2026-10-23T05:58:51.669Z",
+  "checks": {
+    "metadata": {
+      "status": "pass",
+      "result": {
+        "titles": 78,
+        "anime": 22,
+        "kdrama": 21
+      }
+    },
+    "search-details": {
+      "status": "pass",
+      "result": {
+        "results": 8,
+        "title": "Oppenheimer",
+        "year": 2023,
+        "cast": [
+          "Cillian Murphy",
+          "Emily Blunt",
+          "Matt Damon"
+        ],
+        "runtime": 181
+      }
+    },
+    "episodes": {
+      "status": "pass",
+      "result": {
+        "title": "Game of Thrones",
+        "seasons": 8,
+        "episode": "Winter Is Coming"
+      }
+    },
+    "registry": {
+      "status": "pass",
+      "result": {
+        "providers": 45
+      }
+    },
+    "live-directory": {
+      "status": "pass",
+      "result": {
+        "candidates": 1000,
+        "bangladesh": 22,
+        "india": 675
+      }
+    },
+    "native-stream": {
+      "status": "pass",
+      "result": [
+        {
+          "label": "Bengali",
+          "container": "hls",
+          "verification": "transport-verified",
+          "downloadable": true
+        },
+        {
+          "label": "Tamil",
+          "container": "hls",
+          "verification": "transport-verified",
+          "downloadable": true
+        },
+        {
+          "label": "Telugu",
+          "container": "hls",
+          "verification": "transport-verified",
+          "downloadable": true
+        }
+      ]
+    },
+    "offline-hls-plan": {
+      "status": "pass",
+      "result": {
+        "playlists": 2,
+        "resources": 2159
+      }
+    },
+    "offline-metadata-cache": {
+      "status": "pass",
+      "result": {
+        "titles": 87
+      }
+    }
+  },
+  "devicePlayback": "unverified",
+  "download": "MP4 and finite HLS offline downloads implemented; device download and local playback are unverified"
+}

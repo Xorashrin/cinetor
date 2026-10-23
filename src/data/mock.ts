@@ -5,6 +5,9 @@ export type Badge = 'new-episode' | 'new-season' | 'recently-added' | 'leaving-s
 
 export interface PlaybackSourceRef {
   url: string;
+  headers?: Record<string, string>;
+  label?: string;
+  downloadable?: boolean;
   sourceId?: string;
   verificationState?: string;
   quality?: string;
@@ -21,6 +24,7 @@ export interface Episode {
   seed: string;
   video: string;
   sources?: PlaybackSourceRef[];
+  posterUrl?: string;
 }
 
 export interface Season {
@@ -57,6 +61,14 @@ export interface Title {
   posterUrl?: string;
   backdropUrl?: string;
   sources?: PlaybackSourceRef[];
+  metadataProvider?: 'tmdb';
+  tmdbId?: number;
+  mediaType?: 'movie' | 'tv';
+  originalLanguage?: string;
+  imdbId?: string;
+  rating?: number;
+  popularity?: number;
+  metadataUpdatedAt?: number;
 }
 
 export interface Profile {

@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +16,7 @@ import { img } from '../data/images';
 import { AVAILABLE, findEpisode, getTitle, top10Rank, type Episode, type Title } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 import { downloadFor, progressFor, useApp, type Rating } from '../state/AppState';
+import { catalog } from '../engine/runtime';
 import { colors, radius } from '../theme/tokens';
 import { formatRuntime, seasonsLabel } from '../utils/format';
 
@@ -77,7 +78,7 @@ function EpisodeRow({ title, episode, onPlay }: { title: Title; episode: Episode
     <View style={styles.episode}>
       <View style={styles.episodeTop}>
         <Pressable onPress={onPlay} style={styles.still}>
-          <Image source={img.still(episode.seed)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} cachePolicy="memory-disk" />
+          <Image source={episode.posterUrl ? { uri: episode.posterUrl } : title.backdropUrl ? { uri: title.backdropUrl } : img.still(episode.seed)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} cachePolicy="memory-disk" />
           <View style={styles.stillPlay}>
             <Ionicons name="play" size={16} color={colors.text} style={{ marginLeft: 2 }} />
           </View>
@@ -104,7 +105,12 @@ export default function TitleScreen({ navigation, route }: Props) {
   const title = getTitle(route.params.id);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { profileData, toggleMyList, rate, toggleReminder, startDownload, showToast } = useApp();
+  const { profileData, toggleMyList, rate, toggleReminder, startDownload, showToast, catalogVersion } = useApp();
+  useEffect(() => {
+    const controller = new AbortController();
+    void catalog.detail(route.params.id, controller.signal).catch(() => showToast("Could not load title details. Please try again."));
+    return () => controller.abort();
+  }, [route.params.id]);
   const [tab, setTab] = useState<Tab>(title.kind === 'series' ? 'episodes' : 'more');
   const [seasonNumber, setSeasonNumber] = useState(1);
   const [seasonPicker, setSeasonPicker] = useState(false);
@@ -123,7 +129,7 @@ export default function TitleScreen({ navigation, route }: Props) {
   const movieDownload = title.kind === 'movie' ? downloadFor(profileData, title.id) : undefined;
   const similar = useMemo(
     () => AVAILABLE.filter((t) => t.id !== title.id && t.genres.some((g) => title.genres.includes(g))).slice(0, 12),
-    [title],
+    [title, catalogVersion],
   );
   const tabs: { key: Tab; label: string }[] = [
     ...(title.kind === 'series' ? [{ key: 'episodes' as const, label: 'Episodes' }] : []),
@@ -369,7 +375,9 @@ export default function TitleScreen({ navigation, route }: Props) {
           selected={`Season ${seasonNumber}`}
           onClose={() => setSeasonPicker(false)}
           onSelect={(v) => {
-            setSeasonNumber(Number(v.replace('Season ', '')));
+            const selected = Number(v.replace('Season ', ''));
+            setSeasonNumber(selected);
+            void catalog.season(title.id, selected).catch(() => showToast("Could not load episodes."));
             setSeasonPicker(false);
           }}
         />

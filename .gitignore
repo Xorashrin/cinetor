@@ -47,3 +47,6 @@ docs/rea-evidence/*.txt
 
 # Generated Python tooling bytecode
 __pycache__/
+
+# Local engineering recovery logs
+.gravitas/

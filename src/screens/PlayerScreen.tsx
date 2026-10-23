@@ -28,25 +28,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Txt } from "../components/Txt";
 import { img } from "../data/images";
-import { findEpisode, getTitle, nextEpisode } from "../data/mock";
+import { findEpisode, getTitle, nextEpisode, type PlaybackSourceRef } from "../data/mock";
 import type { RootStackParamList } from "../navigation/types";
-import { downloadFor, useApp } from "../state/AppState";
+import { downloadFor, progressFor, useApp } from "../state/AppState";
 import { colors, motion } from "../theme/tokens";
 import {
-  catalog,
+  reportPlayback,
+  resolvePlayback,
   resolver,
   playbackSource,
-  scheduler,
 } from "../engine/runtime";
 import { formatClock } from "../utils/format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Player">;
-type Panel = "none" | "speed" | "episodes" | "audio";
+type Panel = "none" | "speed" | "episodes" | "audio" | "sources";
 type MciName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5];
-const AUDIO = ["English [Original]", "Bangla", "Hindi", "Spanish"];
-const SUBTITLES = ["Off", "English", "English [CC]", "Bangla", "Hindi"];
+const AUDIO = ["Default"];
+const SUBTITLES = ["Off"];
 const HIDE_AFTER = 4000;
 
 function SeekBar({
@@ -154,13 +154,13 @@ function BottomAction({
 
 export default function PlayerScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { setProgress, state, showToast, profileData } = useApp();
+  const { setProgress, state, showToast, profileData, catalogVersion } = useApp();
   const title = getTitle(route.params.id);
   const found =
     title.kind === "series" ? findEpisode(title, route.params.episodeId) : null;
   const episode = found?.episode;
   const next = episode ? nextEpisode(title, episode.id) : null;
-  const offline = downloadFor(profileData, title.id, episode?.id);
+  const offline = downloadFor(profileData, title.id, route.params.episodeId ?? episode?.id);
   // Prefer the downloaded file so playback works offline.
   const initialSources = useMemo(
     () =>
@@ -169,9 +169,8 @@ export default function PlayerScreen({ navigation, route }: Props) {
         found?.season.number,
         episode?.number,
         new Set(),
-        scheduler.adultAccess,
       ),
-    [route.params.id, route.params.episodeId],
+    [route.params.id, route.params.episodeId, catalogVersion],
   );
   const source =
     offline?.status === "downloaded" && offline.localUri
@@ -202,6 +201,11 @@ export default function PlayerScreen({ navigation, route }: Props) {
   const [seekHint, setSeekHint] = useState<"back" | "forward" | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const currentUrlRef = useRef(source);
+  const resumed = useRef(false);
+  const [resolving, setResolving] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [availableSources, setAvailableSources] = useState<PlaybackSourceRef[]>(initialSources);
+  const [selectedSource, setSelectedSource] = useState(source);
   const decoderReported = useRef(new Set<string>());
   const failedUrlsRef = useRef<Set<string>>(new Set());
   const isFailingOverRef = useRef(false);
@@ -210,41 +214,60 @@ export default function PlayerScreen({ navigation, route }: Props) {
 
   const loadSource = useCallback(
     async (url: string, sourceId?: string) => {
+      const savedPosition = latest.current.position;
+      const wasPlaying = player.playing;
       const ref = await playbackSource(url, sourceId);
       await player.replaceAsync(ref);
-      player.play();
+      setSelectedSource(url);
+      if (savedPosition > 0) player.currentTime = savedPosition;
+      if (wasPlaying || savedPosition === 0) player.play();
     },
     [player],
   );
 
   useEffect(() => {
-    currentUrlRef.current = source;
+    const controller = new AbortController();
+    let alive = true;
     failedUrlsRef.current.clear();
-    const refs = initialSources.length
-      ? initialSources
-      : (episode?.sources ?? title.sources ?? []);
-    void loadSource(
-      source,
-      refs.find((ref) => ref.url === source)?.sourceId,
-    ).catch(() =>
-      setPlaybackError("Unable to load video. Check your connection."),
-    );
-  }, [source, loadSource]);
+    latest.current = { position: 0, duration: 0 };
+    setPosition(0);
+    setDuration(0);
+    resumed.current = false;
+    setPlaybackError(null);
+    setResolving(true);
+    void (async () => {
+      let url = source;
+      let sourceId = initialSources.find(ref => ref.url === url)?.sourceId;
+      setAvailableSources(initialSources);
+      if (!(offline?.status === "downloaded" && offline.localUri) && !url) {
+        const refs = await resolvePlayback(route.params.id, route.params.episodeId, controller.signal);
+        if (!alive) return;
+        setAvailableSources(refs);
+        url = refs[0]?.url ?? "";
+        sourceId = refs[0]?.sourceId;
+      }
+      if (!url) throw new Error("Unavailable");
+      if (!alive) return;
+      currentUrlRef.current = url;
+      await loadSource(url, sourceId);
+    })().catch(() => {
+      if (alive) setPlaybackError("This title's stream is unavailable. Please try again later.");
+    }).finally(() => { if (alive) setResolving(false); });
+    return () => { alive = false; controller.abort(); };
+  }, [route.params.id, route.params.episodeId, retry, loadSource]);
 
   const failover = useCallback(async () => {
     if (isFailingOverRef.current) return;
     isFailingOverRef.current = true;
     const failedUrl = currentUrlRef.current;
     failedUrlsRef.current.add(failedUrl);
-    void catalog
-      .reportPlayback(title.id, failedUrl, false)
+    void reportPlayback(title.id, failedUrl, false)
       .catch(() => undefined);
     const alternatives = resolver.alternatives(
       title.id,
       found?.season.number,
       episode?.number,
       failedUrlsRef.current,
-      scheduler.adultAccess,
     );
     for (const mirror of alternatives) {
       try {
@@ -255,8 +278,7 @@ export default function PlayerScreen({ navigation, route }: Props) {
         return;
       } catch {
         failedUrlsRef.current.add(mirror.url);
-        void catalog
-          .reportPlayback(title.id, mirror.url, false)
+        void reportPlayback(title.id, mirror.url, false)
           .catch(() => undefined);
       }
     }
@@ -267,11 +289,35 @@ export default function PlayerScreen({ navigation, route }: Props) {
   }, [title.id, found?.season.number, episode?.number, loadSource]);
 
   useEffect(() => {
+    if (resolving) return;
     if (status === "error") void failover();
     if (status === "readyToPlay" || playbackError) return;
     const timer = setTimeout(() => void failover(), 15000);
     return () => clearTimeout(timer);
-  }, [status, failover, playbackError, source]);
+  }, [status, failover, playbackError, source, resolving]);
+
+  useEffect(() => {
+    if (status !== "readyToPlay" || resumed.current) return;
+    resumed.current = true;
+    const progress = progressFor(profileData, title.id);
+    if (progress && progress.episodeId === episode?.id && progress.position < progress.duration - 10)
+      player.currentTime = Math.max(0, Math.min(progress.position, player.duration || progress.duration));
+  }, [status, player, title.id, episode?.id]);
+
+  const audioTracks = player.availableAudioTracks;
+  const subtitleTracks = player.availableSubtitleTracks;
+  const trackName = (track: { label?: string | null; language?: string | null }, index: number) => track.label || track.language || `Track ${index + 1}`;
+  const audioOptions = audioTracks.length ? audioTracks.map(trackName) : AUDIO;
+  const subtitleOptions = ["Off", ...subtitleTracks.map(trackName)];
+  const selectAudio = (value: string) => {
+    setAudio(value);
+    const index = audioOptions.indexOf(value);
+    if (audioTracks[index]) player.audioTrack = audioTracks[index];
+  };
+  const selectSubtitle = (value: string) => {
+    setSubtitle(value);
+    player.subtitleTrack = value === "Off" ? null : subtitleTracks[subtitleOptions.indexOf(value) - 1] ?? null;
+  };
 
   useEventListener(player, "timeUpdate", ({ currentTime }) => {
     setPosition(currentTime);
@@ -281,8 +327,7 @@ export default function PlayerScreen({ navigation, route }: Props) {
       !decoderReported.current.has(currentUrlRef.current)
     ) {
       decoderReported.current.add(currentUrlRef.current);
-      void catalog
-        .reportPlayback(title.id, currentUrlRef.current, true)
+      void reportPlayback(title.id, currentUrlRef.current, true)
         .catch(() => undefined);
     }
     latest.current.position = currentTime;
@@ -320,7 +365,7 @@ export default function PlayerScreen({ navigation, route }: Props) {
       return;
     const timer = setTimeout(() => setVisible(false), HIDE_AFTER);
     return () => clearTimeout(timer);
-  }, [visible, isPlaying, panel, scrubbing, position]);
+  }, [visible, isPlaying, panel, scrubbing]);
 
   useEffect(() => {
     if (!seekHint) return;
@@ -345,6 +390,19 @@ export default function PlayerScreen({ navigation, route }: Props) {
   );
   const seekTo = useCallback((t: number) => (player.currentTime = t), [player]);
   const togglePlay = () => (isPlaying ? player.pause() : player.play());
+  const selectSource = async (ref: PlaybackSourceRef) => {
+    setPanel("none");
+    setPlaybackError(null);
+    setResolving(true);
+    currentUrlRef.current = ref.url;
+    try {
+      await loadSource(ref.url, ref.sourceId);
+    } catch {
+      setPlaybackError("This source is unavailable. Select another source or try again.");
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const onSurfacePress = (side: "left" | "right") => {
     if (locked) {
@@ -397,7 +455,7 @@ export default function PlayerScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      {status === "loading" ? (
+      {(resolving || status === "loading") ? (
         <ActivityIndicator
           size="large"
           color={colors.red}
@@ -503,6 +561,9 @@ export default function PlayerScreen({ navigation, route }: Props) {
             onScrubChange={setScrubbing}
           />
           <View style={styles.bottomActions}>
+            {availableSources.length > 1 && offline?.status !== "downloaded" ? (
+              <BottomAction icon="server-network" label="Sources" onPress={() => setPanel("sources")} />
+            ) : null}
             <BottomAction
               icon="speedometer"
               label={`Speed (${speed}x)`}
@@ -614,6 +675,26 @@ export default function PlayerScreen({ navigation, route }: Props) {
             <Ionicons name="close" size={30} color={colors.text} />
           </Pressable>
 
+          {panel === "sources" ? (
+            <View style={[styles.audioWrap, { paddingHorizontal: insets.left + 60 }]}>
+              <View style={{ flex: 1 }}>
+                <Txt weight="bold" size={20} style={{ marginBottom: 16 }}>Sources</Txt>
+                <ScrollView>
+                  {availableSources.map((ref, index) => (
+                    <Pressable key={ref.url} onPress={() => void selectSource(ref)} style={styles.audioOption}>
+                      <View style={{ width: 26 }}>
+                        {ref.url === selectedSource ? <Ionicons name="checkmark" size={20} color={colors.text} /> : null}
+                      </View>
+                      <Txt size={16} weight={ref.url === selectedSource ? "bold" : "regular"}>
+                        {ref.label ?? `Source ${index + 1}`}
+                      </Txt>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          ) : null}
+
           {panel === "speed" ? (
             <View style={styles.speedWrap}>
               <Txt
@@ -668,15 +749,15 @@ export default function PlayerScreen({ navigation, route }: Props) {
               {[
                 {
                   heading: "Audio",
-                  options: AUDIO,
+                  options: audioOptions,
                   value: audio,
-                  set: setAudio,
+                  set: selectAudio,
                 },
                 {
                   heading: "Subtitles",
-                  options: SUBTITLES,
+                  options: subtitleOptions,
                   value: subtitle,
-                  set: setSubtitle,
+                  set: selectSubtitle,
                 },
               ].map((col) => (
                 <View key={col.heading} style={{ flex: 1 }}>
@@ -751,7 +832,7 @@ export default function PlayerScreen({ navigation, route }: Props) {
                       ]}
                     >
                       <Image
-                        source={img.still(e.seed)}
+                        source={e.posterUrl ? { uri: e.posterUrl } : title.backdropUrl ? { uri: title.backdropUrl } : img.still(e.seed)}
                         style={StyleSheet.absoluteFill}
                         contentFit="cover"
                         cachePolicy="memory-disk"
@@ -795,6 +876,12 @@ export default function PlayerScreen({ navigation, route }: Props) {
           >
             {playbackError}
           </Txt>
+          <Pressable onPress={() => setRetry(value => value + 1)} style={{ padding: 16 }}><Txt weight="bold" color={colors.red}>Retry</Txt></Pressable>
+          {availableSources.length > 1 ? (
+            <Pressable onPress={() => { setPlaybackError(null); setPanel("sources"); }} style={{ padding: 12 }}>
+              <Txt weight="bold">Choose Another Source</Txt>
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={() => navigation.goBack()}
             style={styles.errorButton}
