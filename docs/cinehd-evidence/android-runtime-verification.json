@@ -1,0 +1,149 @@
+{
+  "observedAt": "2026-10-23T07:53:44.903413+00:00",
+  "sourceCommit": "381e421a3959eabe73d7787dbff11dc15c3847c3",
+  "apkSha256": "8ef5f4a6579de61a0032069ac622f93d3b7697feaa64ad9c9d7dca79f3ab0895",
+  "android": {
+    "api": 35,
+    "architecture": "x86_64",
+    "physicalArmDevices": "not tested"
+  },
+  "startup": {
+    "apkSha256": "8ef5f4a6579de61a0032069ac622f93d3b7697feaa64ad9c9d7dca79f3ab0895",
+    "package": "com.cinator.app",
+    "api": "35",
+    "architecture": "x86_64",
+    "startup": "pass",
+    "homeAndAnimeNavigationRendered": true,
+    "elapsedSeconds": 13.1,
+    "playback": "not tested by this startup validator"
+  },
+  "remote": {
+    "remoteSearch": {
+      "status": "pass",
+      "evidence": "UI rendered; full local evidence retained"
+    },
+    "realDetails": {
+      "status": "pass",
+      "evidence": {
+        "title": "Oppenheimer",
+        "castPresent": true
+      }
+    },
+    "nativePlayback": {
+      "status": "pass",
+      "evidence": {
+        "before": {
+          "state": "PLAYING",
+          "positionMs": 569140,
+          "bufferedMs": 590631
+        },
+        "after": {
+          "state": "PLAYING",
+          "positionMs": 572142,
+          "bufferedMs": 610651
+        }
+      }
+    },
+    "pause": {
+      "status": "pass",
+      "evidence": {
+        "beforeMs": 575589,
+        "afterMs": 575589
+      }
+    },
+    "seekTenSeconds": {
+      "status": "pass",
+      "evidence": {
+        "beforeMs": 575589,
+        "afterMs": 585600
+      }
+    },
+    "sourceSwitch": {
+      "status": "pass",
+      "evidence": {
+        "before": {
+          "state": "PLAYING",
+          "positionMs": 589857,
+          "bufferedMs": 632214
+        },
+        "after": {
+          "state": "PLAYING",
+          "positionMs": 592917,
+          "bufferedMs": 646687
+        }
+      }
+    },
+    "persistedResume": {
+      "status": "pass",
+      "evidence": "UI rendered; full local evidence retained"
+    },
+    "sampleLivePlayback": {
+      "status": "pass",
+      "evidence": {
+        "state": {
+          "state": "PLAYING",
+          "positionMs": -1,
+          "bufferedMs": -1
+        },
+        "videoFramesChange": true
+      }
+    }
+  },
+  "offline": {
+    "completedHlsPersistedAfterUpgrade": {
+      "status": "pass",
+      "evidence": "UI rendered; full local evidence retained"
+    },
+    "offlinePlayback": {
+      "status": "pass",
+      "evidence": {
+        "before": {
+          "state": "PLAYING",
+          "positionMs": 523611,
+          "bufferedMs": 576617
+        },
+        "after": {
+          "state": "PLAYING",
+          "positionMs": 524660,
+          "bufferedMs": 576617
+        }
+      }
+    },
+    "offlineContinues": {
+      "status": "pass",
+      "evidence": {
+        "before": {
+          "state": "PLAYING",
+          "positionMs": 534022,
+          "bufferedMs": 586627
+        },
+        "after": {
+          "state": "PLAYING",
+          "positionMs": 536810,
+          "bufferedMs": 590631
+        }
+      }
+    },
+    "offlinePause": {
+      "status": "pass",
+      "evidence": {
+        "state": "PAUSED",
+        "positionMs": 537958,
+        "bufferedMs": 590631
+      }
+    }
+  },
+  "offlineDownload": {
+    "completedOn": "diagnostic APK with the same download implementation",
+    "size": "1.3 GB",
+    "retainedAndPlayedOn": "exact v1.1.1 signed release with Wi-Fi/mobile data disabled",
+    "deletedOnRelease": true
+  },
+  "contentIdentity": "fail: sampled upstream Bengali media differs from the selected title",
+  "upstreamAdFree": "fail: sampled media contains a baked-in betting watermark",
+  "limits": [
+    "Physical ARM devices, MP4 device export, subtitle selection, and OS background execution are unverified.",
+    "External providers can return mismatched films and baked-in advertisements."
+  ],
+  "verdict": "PASS for sampled application startup/navigation/decoder/controls/offline behavior; FAIL for guaranteed correct ad-free upstream content"
+}
