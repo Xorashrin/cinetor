@@ -20,7 +20,7 @@ def inspect(apk: Path, commit: str, output: Path):
     if not match:
         raise SystemExit('APK package metadata missing')
     package, code, version = match.groups()
-    if package != 'com.cinator.app' or version != '1.1.0' or code != '5':
+    if package != 'com.cinator.app' or version != '1.1.1' or code != '6':
         raise SystemExit(f'Unexpected APK identity: {match.group(0)}')
     signatures = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--verbose', '--print-certs', str(apk)], text=True)
     with zipfile.ZipFile(apk) as archive:

@@ -27,11 +27,11 @@ export default function AboutScreen() {
           </View>
           <View style={styles.versionPill}>
             <Txt weight="bold" size={12} color={colors.red}>
-              v1.1.0
+              v1.1.1
             </Txt>
             <View style={styles.pillDot} />
             <Txt size={12} color={colors.textDim}>
-              Build 5
+              Build 6
             </Txt>
           </View>
 

@@ -1,6 +1,6 @@
 # CineHD Provider Configuration
 
-Version 1.1.0 replaces the previous BDIX/JSON/directory/M3U discovery subsystem with CineHD provider adapters. There is no server configuration screen and no TMDB credential field, as requested.
+Version 1.1.1 replaces the previous BDIX/JSON/directory/M3U discovery subsystem with CineHD provider adapters. There is no server configuration screen and no TMDB credential field, as requested.
 
 ## Active contracts
 
