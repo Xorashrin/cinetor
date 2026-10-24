@@ -258,7 +258,7 @@ function TitleDetails({ id, navigation }: { id: string; navigation: Props['navig
               ) : null}
             </View>
           }
-          ListEmptyComponent={emptyEpisodes}
+          ListEmptyComponent={emptyEpisodes ?? undefined}
         />
       )}
       <CatalogPicker visible={seasonPicker} title="Choose season" choices={seasons.map(value => ({ key: String(value.number), label: seasonLabel(value.number) }))} selected={seasonNumber === undefined ? '' : String(seasonNumber)} onSelect={value => setSelectedSeason(Number(value))} onClose={() => setSeasonPicker(false)} />

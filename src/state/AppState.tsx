@@ -50,7 +50,7 @@ const initialSnapshot = normalize(freshSnapshot());
 const initialState: State = { ...initialSnapshot, ...derived(initialSnapshot), hydrated: false, persistenceReady: false, authReady: true, signedIn: true, creditSeen: true, catalogVersion: 0, toast: null };
 function reducer(state: State, action: Action): State {
   if (!['HYDRATE', 'IMPORT', 'TOAST', 'CLEAR_TOAST', 'CATALOG'].includes(action.type) && (!state.hydrated || !state.persistenceReady)) return state;
-  let next = state;
+  let next: Omit<State, 'settings'> & { settings: LocalSettings } = state;
   switch (action.type) {
     case 'HYDRATE': next = { ...state, ...normalize(action.snapshot), hydrated: true, persistenceReady: action.writable, hydrationError: action.error }; break;
     case 'IMPORT': next = { ...state, ...normalize(action.snapshot), hydrated: true, persistenceReady: true, hydrationError: undefined }; break;

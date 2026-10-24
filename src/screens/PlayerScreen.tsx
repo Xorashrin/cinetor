@@ -210,10 +210,10 @@ export default function PlayerScreen({ navigation, route }: Props) {
   </View>;
 }
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000000' }, center: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }, space: { marginTop: 12 },
+  root: { flex: 1, backgroundColor: '#000000' }, center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' }, space: { marginTop: 12 },
   top: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.scrim, borderRadius: 12 }, transport: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 48 },
   bottom: { marginTop: 'auto', backgroundColor: colors.overlay, borderRadius: 12, paddingHorizontal: 12 }, actions: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, flexWrap: 'wrap' }, offline: { color: colors.success, padding: 12 },
   seekRow: { flexDirection: 'row', alignItems: 'center', gap: 12 }, seekTouch: { flex: 1, minHeight: 48, justifyContent: 'center' }, seekTrack: { height: 5, backgroundColor: colors.surface5, borderRadius: 3 }, seekFill: { height: 5, borderRadius: 3, backgroundColor: colors.accent },
-  panel: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bg }, option: { minHeight: 56, justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 12, gap: 4, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle }, trackGroup: { marginVertical: 16 },
+  panel: { ...StyleSheet.absoluteFill, backgroundColor: colors.bg }, option: { minHeight: 56, justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 12, gap: 4, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle }, trackGroup: { marginVertical: 16 },
   error: { position: 'absolute', top: '20%', left: 16, right: 16, backgroundColor: colors.overlay, padding: 24, borderRadius: 20, alignItems: 'center' },
 });

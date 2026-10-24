@@ -51,7 +51,7 @@ function SectionSearch({ section, preferenceKey, navigation }: { section: Catalo
   const [sectionPicker, setSectionPicker] = useState(false);
   const [sortPicker, setSortPicker] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const listRef = useRef<FlatList<Title>>(null);
   const query = preferences.query.trim();
   const requestKey = `${preferenceKey}:${query}`;
