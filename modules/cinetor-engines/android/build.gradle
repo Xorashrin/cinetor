@@ -44,16 +44,17 @@ dependencies {
 // Verify the bytes Gradle actually selected, not a separately downloaded look-alike.
 // Dependency changes must update the reviewed lock, not turn verification off.
 def artifactPins = [
-  'quickjs-kt-android-1.0.15.aar': '406c3efb80d5fa3495df4a7f2663be8cc30c974fe5c2368effa929de77cf0ed8',
-  'library-android-v4.8.0.aar': 'c15283dcf40055e4e747aeb6d8ae000dbf66d6a7566cca90e8d68f01020d3a49'
+  'io.github.dokar3:quickjs-kt-android:1.0.15': '406c3efb80d5fa3495df4a7f2663be8cc30c974fe5c2368effa929de77cf0ed8',
+  'com.github.recloudstream.cloudstream:library-android:v4.8.0': 'c15283dcf40055e4e747aeb6d8ae000dbf66d6a7566cca90e8d68f01020d3a49'
 ]
 
 tasks.register('verifyCinetorEngineArtifacts') {
   doLast {
     def artifacts = configurations.releaseRuntimeClasspath.resolvedConfiguration.resolvedArtifacts
-    artifactPins.each { name, expected ->
-      def artifact = artifacts.find { it.file.name == name }
-      if (artifact == null) throw new GradleException("Pinned engine artifact missing: ${name}")
+    artifactPins.each { coordinate, expected ->
+      def matches = artifacts.findAll { it.moduleVersion.id.toString() == coordinate && it.extension == 'aar' }
+      if (matches.size() != 1) throw new GradleException("Expected one pinned engine AAR: ${coordinate}; resolved ${artifacts.collect { it.moduleVersion.id.toString() + ' / ' + it.file.name }}")
+      def artifact = matches.first()
       def digest = java.security.MessageDigest.getInstance('SHA-256')
       artifact.file.withInputStream { stream ->
         byte[] buffer = new byte[65536]
@@ -61,7 +62,7 @@ tasks.register('verifyCinetorEngineArtifacts') {
         while ((size = stream.read(buffer)) > 0) digest.update(buffer, 0, size)
       }
       def actual = digest.digest().encodeHex().toString()
-      if (actual != expected) throw new GradleException("Engine integrity mismatch: ${name}")
+      if (actual != expected) throw new GradleException("Engine integrity mismatch: ${coordinate}")
     }
   }
 }
