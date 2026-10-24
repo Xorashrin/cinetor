@@ -1,0 +1,41 @@
+apply plugin: 'com.android.library'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'expo.modules.cinetorbdix'
+version = '1.0.0'
+
+// Compute provenance from the actual shipped adapter inputs during the cloud build.
+// It is not a commit ID, endpoint URL, signing key, or invented provider hash.
+def bdixSourceRoot = file('../../..').canonicalFile
+def bdixDigest = java.security.MessageDigest.getInstance('SHA-256')
+def bdixSources = files(
+  file('build.gradle'), file('consumer-rules.pro'), file('../expo-module.config.json'), file('../index.ts'),
+  file('src/main/AndroidManifest.xml'), fileTree('src/main/java') { include '**/*.kt' },
+  file('../../../src/providers/bdix.ts'), fileTree('../../../src/providers/bdix') { include '**/*.ts' }
+).files.collect { it.canonicalFile }.sort { a, b -> a.path <=> b.path }
+bdixSources.each { source ->
+  def relative = bdixSourceRoot.toPath().relativize(source.toPath()).toString().replace('\\', '/')
+  bdixDigest.update(relative.getBytes('UTF-8'))
+  bdixDigest.update((byte) 0)
+  bdixDigest.update(source.bytes)
+  bdixDigest.update((byte) 0)
+}
+def bdixSourceSha256 = bdixDigest.digest().encodeHex().toString()
+
+android {
+  namespace 'expo.modules.cinetorbdix'
+  buildFeatures { buildConfig true }
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+    buildConfigField 'String', 'BDIX_SOURCE_SHA256', "\"${bdixSourceSha256}\""
+    consumerProguardFiles 'consumer-rules.pro'
+  }
+  testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+  implementation 'commons-net:commons-net:3.12.0'
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'com.squareup.okhttp3:okhttp-tls:4.12.0'
+}
