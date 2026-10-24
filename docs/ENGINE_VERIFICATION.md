@@ -21,7 +21,7 @@ The initial handoff stopped after one source push. After the user reported the S
 9. Android 15 startup smoke on the exact signed APK. It requires rendered navigation and a live application process; it explicitly does not test playback.
 10. Corresponding engine source, exact application Git source, generated fixture provenance, notices, and checksums packaged with the passing commit-bound Actions artifact.
 
-Verification logs and native reports upload even after failures when available. The final APK artifact uploads only after all required gates pass. The workflow does not create a public release or overwrite the historical v1.1.1 tag.
+Verification logs and native reports upload even after failures when available. Host assembly, fixture packaging, instrumentation compilation, BDIX tests, and media tests have separate logs. Once prebuild and Gradle setup pass, independent BDIX and media tests still run after another native stage fails. No failure is ignored: APK assembly and final artifact publication remain blocked until all preceding gates pass. The workflow does not create a public release or overwrite the historical v1.1.1 tag.
 
 ## Interpretation
 

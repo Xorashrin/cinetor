@@ -132,8 +132,8 @@ internal object MediaSafety {
       !(bytes[0] == 0x20 && bytes[1] == 0x01 && (bytes[2] == 0 && bytes[3] <= 0x1f || bytes[2] == 0x0d && bytes[3] == 0xb8))
   }
 
-  private val publicDns = Dns { hostname ->
-    Dns.SYSTEM.lookup(hostname).also { addresses ->
+  private val publicDns = object : Dns {
+    override fun lookup(hostname: String): List<InetAddress> = Dns.SYSTEM.lookup(hostname).also { addresses ->
       if (addresses.isEmpty() || addresses.any { !publicAddress(it) }) throw MediaFailure("unsafe_source", "Media DNS resolved to a private destination")
     }
   }
@@ -142,9 +142,11 @@ internal object MediaSafety {
     .proxy(Proxy.NO_PROXY).connectTimeout(20, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
     .build()
   val publicClient: OkHttpClient = baseClient.newBuilder().dns(publicDns).build()
-  val loopbackClient: OkHttpClient = baseClient.newBuilder().dns(Dns { hostname ->
-    if (hostname != "127.0.0.1") throw MediaFailure("unsafe_source", "Invalid local destination")
-    listOf(InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)))
+  val loopbackClient: OkHttpClient = baseClient.newBuilder().dns(object : Dns {
+    override fun lookup(hostname: String): List<InetAddress> {
+      if (hostname != "127.0.0.1") throw MediaFailure("unsafe_source", "Invalid local destination")
+      return listOf(InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)))
+    }
   }).build()
 
   fun acquire(host: String): () -> Unit {
@@ -172,9 +174,11 @@ internal object MediaSafety {
 
   fun boundClient(network: Network): OkHttpClient = publicClient.newBuilder().socketFactory(network.socketFactory)
     .connectionPool(okhttp3.ConnectionPool(0, 1, TimeUnit.SECONDS))
-    .dns(Dns { hostname -> network.getAllByName(hostname).toList().also { addresses ->
-      if (addresses.isEmpty() || addresses.any { !publicAddress(it) }) throw MediaFailure("unsafe_source", "Media DNS resolved to a private destination")
-    } }).build()
+    .dns(object : Dns {
+      override fun lookup(hostname: String): List<InetAddress> = network.getAllByName(hostname).toList().also { addresses ->
+        if (addresses.isEmpty() || addresses.any { !publicAddress(it) }) throw MediaFailure("unsafe_source", "Media DNS resolved to a private destination")
+      }
+    }).build()
 
   fun wifiConnected(context: Context): Boolean {
     val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager

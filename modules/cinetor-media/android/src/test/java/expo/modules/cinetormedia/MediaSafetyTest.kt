@@ -26,6 +26,23 @@ class MediaSafetyTest {
     fails { MediaSafety.checkedUrl(uri) }
   }
 
+  @Test fun nativeDnsClientsKeepPublicAndExactLoopbackDestinationsSeparate() {
+    val loopback = InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1))
+    assertEquals(listOf(loopback), MediaSafety.loopbackClient.dns.lookup("127.0.0.1"))
+    listOf("localhost", "127.0.0.2", "::1", "media.example").forEach { hostname ->
+      fails { MediaSafety.loopbackClient.dns.lookup(hostname) }
+    }
+    fails { MediaSafety.publicClient.dns.lookup("127.0.0.1") }
+    fails { MediaSafety.publicClient.dns.lookup("10.0.0.1") }
+    assertEquals("8.8.8.8", MediaSafety.publicClient.dns.lookup("8.8.8.8").single().hostAddress)
+    listOf(MediaSafety.publicClient, MediaSafety.loopbackClient).forEach { client ->
+      assertFalse(client.followRedirects)
+      assertFalse(client.followSslRedirects)
+      assertFalse(client.retryOnConnectionFailure)
+      assertEquals(java.net.Proxy.NO_PROXY, client.proxy)
+    }
+  }
+
   @Test fun credentialOriginsNeverSilentlyFollowResolvedMediaUrls() {
     val root = MediaSafety.checkedUrl("https://cdn.example/video.mp4")
     assertTrue(MediaSafety.credentialOrigin("https://source.example", root) == "https://source.example:443")

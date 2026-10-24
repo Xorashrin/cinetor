@@ -73,22 +73,44 @@ jobs:
           npx expo install --check 2>&1 | tee artifacts/checks/expo-compatibility.log
           npx expo-doctor 2>&1 | tee artifacts/checks/expo-doctor.log
       - name: Generate secure Android project
+        id: android_project
         run: npm run prebuild:android
       - uses: gradle/actions/setup-gradle@v4
+        id: gradle_setup
       - name: Build the reviewed native host for the owned fixture
+        id: native_host
         shell: bash
         run: |
           set -euo pipefail
-          ./android/gradlew -p android :cinetor-engines:assembleRelease :cinetor-bdix:compileDebugKotlin :cinetor-media:compileReleaseKotlin -Pcinetor.fixtureBootstrap=true --continue --no-daemon 2>&1 | tee artifacts/checks/native-host.log
+          ./android/gradlew -p android :cinetor-engines:assembleRelease -Pcinetor.fixtureBootstrap=true --no-daemon 2>&1 | tee artifacts/checks/native-host.log
+      - name: Compile and package the owned Cloudstream fixture
+        id: owned_fixture
+        shell: bash
+        run: |
+          set -euo pipefail
           python3 -I tools/fetch_engine_sources.py --prepare-fixture --host-aar modules/cinetor-engines/android/build/outputs/aar/cinetor-engines-release.aar
           ./android/gradlew -p modules/cinetor-engines/fixtures/cloudstream assembleRelease --no-daemon 2>&1 | tee artifacts/checks/cloudstream-fixture.log
           python3 -I tools/fetch_engine_sources.py --package-fixture --fixture-apk modules/cinetor-engines/fixtures/cloudstream/build/outputs/apk/release/cloudstream-release-unsigned.apk
-      - name: Run native BDIX and media policy tests
+      - name: Compile native engine instrumentation before the app
         shell: bash
         run: |
           set -euo pipefail
-          ./android/gradlew -p android :cinetor-bdix:testDebugUnitTest :cinetor-media:testReleaseUnitTest --no-daemon 2>&1 | tee artifacts/checks/native-unit-tests.log
+          ./android/gradlew -p android :cinetor-engines:assembleReleaseAndroidTest --no-daemon 2>&1 | tee artifacts/checks/native-instrumentation-build.log
+      - name: Run native BDIX protocol and policy tests
+        id: bdix_tests
+        if: ${{ !cancelled() && steps.android_project.outcome == 'success' && steps.gradle_setup.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./android/gradlew -p android :cinetor-bdix:testDebugUnitTest --continue --no-daemon 2>&1 | tee artifacts/checks/bdix-unit-tests.log
           python3 -I tools/verify_native_tests.py --root modules/cinetor-bdix/android/build/test-results/testDebugUnitTest --require-class BdixPolicyTest --require-class BdixHttpFixtureTest --require-class BdixFtpFixtureTest --require-class BdixFtpsFixtureTest --output artifacts/checks/bdix-tests.json
+      - name: Run native media compilation and policy tests
+        id: media_tests
+        if: ${{ !cancelled() && steps.android_project.outcome == 'success' && steps.gradle_setup.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./android/gradlew -p android :cinetor-media:testReleaseUnitTest --continue --no-daemon 2>&1 | tee artifacts/checks/media-unit-tests.log
           python3 -I tools/verify_native_tests.py --root modules/cinetor-media/android/build/test-results/testReleaseUnitTest --require-class MediaSafetyTest --output artifacts/checks/media-tests.json
       - name: Build universal Android release variant
         shell: bash
@@ -149,6 +171,12 @@ jobs:
             artifacts/checks/
             modules/*/android/build/reports/
             modules/*/android/build/test-results/
+            modules/cinetor-engines/fixtures/cloudstream/build/reports/
             modules/cinetor-engines/android/build/outputs/androidTest-results/
+            builds/release/release-evidence.json
+            builds/release/startup-evidence.json
+            builds/release/startup-logcat.txt
+            builds/release/startup-ui.xml
+            builds/release/startup-screen.png
           if-no-files-found: warn
           retention-days: 30
