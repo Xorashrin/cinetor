@@ -40,7 +40,7 @@ function https(value: unknown): string | undefined {
 }
 function streamUrl(value: unknown): string | undefined {
   const url = https(value);
-  return url && /\.(?:m3u8|mp4)$/i.test(new URL(url).pathname) ? url : undefined;
+  return url && /\.(?:m3u8|mpd|mp4)$/i.test(new URL(url).pathname) ? url : undefined;
 }
 function requestHeaders(value: unknown): Record<string, string> {
   const row = object(value);

@@ -97,6 +97,20 @@ test('cached directory restores candidate URLs and headers without network acces
   assert.equal(calls.length, 0);
 });
 
+test('DASH directory candidates retain their manifest URL across cache hydration', async () => {
+  const data = fixture();
+  data.streams = data.streams.map(row => row.url === 'https://media.example/general.m3u8' ? { ...row, url: 'https://media.example/general.mpd' } : row);
+  const storage = new MemoryStorage();
+  const first = new CineHdLiveDirectory(storage, provider(data));
+  await first.refresh();
+  assert.equal(first.all().find(row => row.id === 'iptv:General.us')?.url, 'https://media.example/general.mpd');
+  const calls: string[] = [];
+  const restored = new CineHdLiveDirectory(storage, provider(data, calls));
+  await restored.load();
+  assert.deepEqual(restored.all(), first.all());
+  assert.equal(calls.length, 0);
+});
+
 test('failed network and storage refreshes retain the last complete directory and persisted cache', async () => {
   const storage = new MemoryStorage();
   const first = new CineHdLiveDirectory(storage, provider(fixture()));

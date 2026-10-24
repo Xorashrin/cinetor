@@ -1,14 +1,28 @@
-# Cinetor CineHD Implementation Plan
+# Cinetor Three-Engine Delivery
 
-1. Compare both supplied APKs with REA archive evidence and offline Hermes analysis. Preserve hashes, request contracts, advertising findings, and analysis limits.
-2. Load metadata independently from native media. Use the second APK's observed public metadata proxy without a copied API key. Support a future project credential through build configuration.
-3. Replace previous JSON/directory/M3U discovery and cached source configuration with CineHD metadata, AWSIND native resolution, and the APK-observed IPTV directory.
-4. Preserve React Native, Expo, Reanimated, theme colors, typography, layout, navigation, and native player. Connect debounced remote search, sorting, details, artwork, seasons, and episodes.
-5. Resolve only native media; validate bounded manifests/segments or MP4 headers. Keep browser embed pages and all ad SDKs outside the app. Preserve play/pause/seek, restore progress, use actual audio/subtitle tracks, add source selection, and support MP4 and finite HLS offline downloads with request headers.
-6. Verify TypeScript, deterministic provider tests, live metadata/search/details/episodes, public registry, IPTV directory, and bounded media resolution. State external provider and device limitations.
-7. Create the requested GitHub repository, push verified code, run Android Actions, inspect the resulting APK and publish build evidence.
-8. Deliver a Markdown report covering completed behavior, evidence, limitations, and repository/APK links.
+## Scope
 
-## Verification policy
+Complete the recovered Cinetor implementation on the existing React Native host. Keep the BDIX, Nuvio, and Cloudstream engines separate behind exact-content contracts. Keep unrelated AshTube/MythFlix/MythTube project code and private backups outside this repository.
 
-Planning: compact recovery of the previous implementation. Context: dependency. Verification: impact, live integration, Android bundle, and release artifact. Delegation: none in the resumed session. Write scope: this project and local release artifacts. Existing UI appearance is preserved by leaving theme, shared visual components, and navigation unchanged. Legacy tracked files remain recoverable in Git history.
+## Implementation stages
+
+1. Recover the existing branch and reviewed planning references without overwriting previous work. Retain package `com.cinator.app` and the existing signing arrangement.
+2. Deliver the five-tab coral/ink interface, virtualized metadata catalogs, profile hub, exact episode navigation, settings, and import/export.
+3. Integrate native selected-network BDIX transport, native QuickJS/Nuvio, and native Cloudstream DEX/resources. Do not replace real engine execution with manifest parsing or unrestricted JavaScript evaluation.
+4. Wire progressive bounded resolution, exact-content mappings, native media probes, representation-scoped first-frame evidence, Media3 controls, and persistent offline downloads.
+5. Add explicit repository declaration intake and a quarantine ledger. Unreviewed metadata never becomes executable code or verified playback coverage.
+6. Fix source-level bridge, cancellation, source identity, profile privacy, download, and CI integration defects. Preserve upstream license text and corresponding-source provenance.
+7. Commit and push the completed source integration once. Cloud CI performs installation, typechecks, tests, native builds, instrumentation, and APK startup. Do not run these tools locally or monitor/retry CI after the requested push.
+
+## Acceptance boundaries
+
+- Metadata and channel listings remain candidates until their own checks run.
+- Only Big Buck Bunny is covered by the two bundled reviewed extension fixtures. No real BDIX endpoint is supplied by this repository.
+- Historical Nuvio/Cloudstream inventories lack their original manifests and review receipts. Their counts are disclosed, not added together or represented as installed providers.
+- Automatic recovery uses one original 45-second deadline, at most three source switches, and one refresh per stable candidate. Position reuse requires compatible timeline identity.
+- Downloads use two transfer slots. MP4, finite non-DRM HLS (including AES-128 identity keys), and finite clear DASH may be downloaded. Native planning validates child manifests and exact 16-byte keys. DRM is rejected; paused/interrupted attempts restart at zero. MKV/WebM remain online-only.
+- Native DEX is not sandboxed. Reviewed, hash-pinned admission is mandatory.
+- Source implementation is not runtime acceptance. CI must produce nonempty passing test reports and signed-APK startup evidence before uploading the release candidate.
+- The Actions artifact must contain corresponding source and notices alongside the APK. It is a debug-certificate-signed release variant, not privately signed distribution.
+
+See `docs/PROGRESS.md` for the current evidence state and `docs/ENGINE_VERIFICATION.md` for the cloud gates. The earlier CineHD replacement plan is superseded; its implementation and evidence remain recoverable in Git history and explicitly historical reports.

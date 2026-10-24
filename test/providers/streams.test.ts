@@ -53,7 +53,7 @@ function fixture(playlist: unknown, leaves: Record<string, string>, calls: Call[
     if (url.endsWith('.mp4')) {
       assert.equal(headers.has('x-csrf-token'), false);
       assert.equal(headers.get('range'), 'bytes=0-4095');
-      return new Response(mp4(), { headers: { 'Content-Type': 'video/mp4' }, status: 206 });
+      return new Response(mp4(), { headers: { 'Content-Type': 'video/mp4', 'Content-Range': 'bytes 0-31/32', 'Content-Length': '32' }, status: 206 });
     }
     throw new Error('Unexpected fixture request: ' + url);
   };

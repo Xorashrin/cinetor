@@ -15,9 +15,11 @@ import MyListScreen from '../screens/MyListScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import PlayerScreen from '../screens/PlayerScreen';
 import ProvidersScreen from '../screens/ProvidersScreen';
+import RepositoriesScreen from '../screens/RepositoriesScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TitleScreen from '../screens/TitleScreen';
+import { useApp } from '../state/AppState';
 import { colors } from '../theme/tokens';
 import { Tabs } from './Tabs';
 import type { RootStackParamList } from './types';
@@ -25,7 +27,9 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const [reduceMotion, setReduceMotion] = useState(true);
+  const [systemReduceMotion, setReduceMotion] = useState(true);
+  const { state } = useApp();
+  const reduceMotion = systemReduceMotion || state.settings.reducedMotion;
   useEffect(() => {
     let active = true;
     void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (active) setReduceMotion(value); }).catch(() => undefined);
@@ -57,6 +61,7 @@ export function RootNavigator() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
       <Stack.Screen name="Providers" component={ProvidersScreen} />
+      <Stack.Screen name="Repositories" component={RepositoriesScreen} />
       <Stack.Screen name="ManageProfiles" component={ManageProfilesScreen} />
       <Stack.Screen name="AdultContent" component={AdultContentScreen} />
       <Stack.Screen name="ImportExport" component={ImportExportScreen} />

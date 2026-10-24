@@ -25,6 +25,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   AppSettings: undefined;
   Providers: undefined;
+  Repositories: undefined;
   ManageProfiles: undefined;
   AdultContent: undefined;
   ImportExport: undefined;

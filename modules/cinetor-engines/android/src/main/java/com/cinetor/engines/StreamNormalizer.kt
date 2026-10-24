@@ -35,7 +35,7 @@ internal object StreamNormalizer {
         val normalizedHeaders = safeHeaders(headers)
         return mapOf("url" to target.toString(), "headers" to normalizedHeaders, "headerOrigin" to origin(target),
             "label" to (label?.take(160) ?: entry.name), "quality" to quality?.take(64), "container" to format,
-            "downloadable" to (downloadable && format in setOf("mp4", "webm", "mkv")),
+            "downloadable" to (downloadable && format in setOf("mp4", "hls", "dash")),
             "subtitleTracks" to subtitles, "sourceId" to "$providerId:${sha256((url + Json.encode(normalizedHeaders)).toByteArray()).take(24)}",
             "providerId" to providerId, "providerVersion" to entry.version, "providerHash" to entry.hash,
             "engine" to entry.engine, "verified" to false).filterValues { it != null }

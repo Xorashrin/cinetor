@@ -1,371 +1,43 @@
-import { Ionicons } from "@expo/vector-icons";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  AppState,
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-  type ListRenderItem,
-} from "react-native";
+import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { ChannelLogo } from "../components/ChannelLogo";
-import { Chip } from "../components/Chip";
-import { ScreenHeader } from "../components/ScreenHeader";
-import { Txt } from "../components/Txt";
-import { ADULT_CHANNELS, type AdultChannel } from "../data/adultChannels";
-import {
-  CHANNEL_FILTERS,
-  filterChannels,
-  type Channel,
-} from "../data/channels";
-import type { RootStackParamList } from "../navigation/types";
-import { useApp } from "../state/AppState";
-import { PosterRow } from "../components/Rows";
-import { toTitle } from "../engine/ui";
-import { catalog, scheduler } from "../engine/runtime";
-import { allowAdultSession } from "../engine/runtime";
-import { colors, layout, radius } from "../theme/tokens";
+import { Button } from '../components/Buttons';
+import { ChannelLogo } from '../components/ChannelLogo';
+import { Chip } from '../components/Chip';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { Txt } from '../components/Txt';
+import { CHANNEL_FILTERS, filterChannels } from '../data/channels';
+import { initializeEngine, refreshLiveDirectory } from '../engine/runtime';
+import type { RootStackParamList } from '../navigation/types';
+import { useApp } from '../state/AppState';
+import { colors } from '../theme/tokens';
 
-type Props = {
-  navigation: any;
-  route?: any;
-};
-type ActiveSection = "general" | "adult";
-
-const COLUMNS = 3;
-
+type Props = NativeStackScreenProps<RootStackParamList, 'LiveTv'>;
 export default function LiveTvScreen({ navigation }: Props) {
-  const { width } = useWindowDimensions();
   const { catalogVersion } = useApp();
-  const [activeSection, setActiveSection] = useState<ActiveSection>("general");
-  const [filter, setFilter] = useState("All");
-  const [adultUnlocked, setAdultUnlocked] = useState(false);
-
-  useEffect(() => {
-    const listener = AppState.addEventListener("change", (state) => {
-      if (state !== "active") {
-        setAdultUnlocked(false);
-        setActiveSection("general");
-      }
-    });
-    return () => listener.remove();
-  }, []);
-  const channels = useMemo(
-    () => filterChannels(filter),
-    [filter, catalogVersion],
-  );
-  const adultTitles = useMemo(
-    () =>
-      adultUnlocked && scheduler.adultAccess
-        ? []
-        : [],
-    [adultUnlocked, catalogVersion],
-  );
-  const cell = Math.floor(
-    (width - layout.gutter * 2 - 8 * (COLUMNS - 1)) / COLUMNS,
-  );
-
-  const handleSelectSection = (section: ActiveSection) => {
-    if (section === "adult" && (!adultUnlocked || !scheduler.adultAccess)) {
-      Alert.alert(
-        "18+ Adult Content Section",
-        "This section contains adult streams and is strictly intended for individuals aged 18 and older. It is completely isolated from all other feeds. Do you confirm you are 18+?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "I am 18+ (Proceed)",
-            style: "destructive",
-            onPress: () => {
-              setAdultUnlocked(true);
-              allowAdultSession();
-              setActiveSection("adult");
-            },
-          },
-        ],
-      );
-      return;
-    }
-    setActiveSection(section);
+  const [filter, setFilter] = useState('All');
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+  const request = useRef<AbortController | null>(null);
+  const refresh = () => {
+    request.current?.abort();
+    const controller = new AbortController(); request.current = controller;
+    setLoading(true); setError(undefined);
+    void refreshLiveDirectory(controller.signal).catch(() => {
+      if (!controller.signal.aborted) setError('The directory could not be refreshed. Saved channel entries remain available.');
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
   };
-
-  const renderChannelItem = useCallback<ListRenderItem<Channel>>(
-    ({ item }) => (
-      <Pressable
-        onPress={() =>
-          navigation.navigate("Live", { channelId: item.id, filter })
-        }
-        style={({ pressed }) => [{ width: cell, opacity: pressed ? 0.7 : 1 }]}
-      >
-        <ChannelLogo channel={item} size={cell} />
-        <Txt
-          weight="medium"
-          size={12}
-          numberOfLines={1}
-          style={{ marginTop: 6 }}
-        >
-          {item.name}
-        </Txt>
-        <View style={styles.meta}>
-          <View style={styles.liveDot} />
-          <Txt size={10} color={colors.textDim} numberOfLines={1}>
-            {item.category}
-            {item.quality ? ` • ${item.quality}` : ""}
-          </Txt>
-        </View>
-      </Pressable>
-    ),
-    [cell, navigation, filter],
-  );
-
-  const renderAdultItem = useCallback<ListRenderItem<AdultChannel>>(
-    ({ item }) => (
-      <Pressable
-        onPress={() => navigation.navigate("Live", { channelId: item.id })}
-        style={({ pressed }) => [styles.adultCard, pressed && { opacity: 0.8 }]}
-      >
-        <View style={styles.adultBadge}>
-          <Txt weight="black" size={11} color={colors.text}>
-            18+
-          </Txt>
-        </View>
-        <View style={styles.adultIconWrap}>
-          <Ionicons name="flame" size={36} color={colors.red} />
-        </View>
-        <View style={{ flex: 1, marginLeft: 14 }}>
-          <Txt weight="bold" size={15} numberOfLines={1}>
-            {item.name}
-          </Txt>
-          <Txt size={12} color={colors.textDim} style={{ marginTop: 2 }}>
-            {item.category} • {item.quality}
-          </Txt>
-        </View>
-        <View style={styles.playIconWrap}>
-          <Ionicons name="play" size={18} color={colors.text} />
-        </View>
-      </Pressable>
-    ),
-    [navigation],
-  );
-
-  const canGoBack = Boolean(navigation?.canGoBack && navigation.canGoBack());
-
-  return (
-    <View style={styles.root}>
-      <ScreenHeader
-        title="Live TV Directory"
-        back={canGoBack}
-        actions={["search"]}
-      />
-
-      {/* Isolated Section Switcher */}
-      <View style={styles.sectionSwitcher}>
-        <Pressable
-          onPress={() => handleSelectSection("general")}
-          style={[
-            styles.switchBtn,
-            activeSection === "general" && styles.switchBtnActive,
-          ]}
-        >
-          <Ionicons
-            name="tv-outline"
-            size={16}
-            color={activeSection === "general" ? colors.text : colors.textDim}
-          />
-          <Txt
-            weight={activeSection === "general" ? "bold" : "medium"}
-            size={13}
-            color={activeSection === "general" ? colors.text : colors.textDim}
-            style={{ marginLeft: 6 }}
-          >
-            General Live TV
-          </Txt>
-        </Pressable>
-
-        <Pressable
-          onPress={() => handleSelectSection("adult")}
-          style={[
-            styles.switchBtn,
-            activeSection === "adult" && styles.switchBtnAdultActive,
-          ]}
-        >
-          <Ionicons
-            name="shield-outline"
-            size={16}
-            color={activeSection === "adult" ? colors.text : colors.textDim}
-          />
-          <Txt
-            weight={activeSection === "adult" ? "bold" : "medium"}
-            size={13}
-            color={activeSection === "adult" ? colors.text : colors.textDim}
-            style={{ marginLeft: 6 }}
-          >
-            Adult Content [18+]
-          </Txt>
-        </Pressable>
-      </View>
-
-      {activeSection === "general" ? (
-        <>
-          <View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chips}
-            >
-              {CHANNEL_FILTERS.map((f) => (
-                <Chip
-                  key={f}
-                  label={f}
-                  selected={filter === f}
-                  solid
-                  onPress={() => setFilter(f)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-          <FlatList
-            key={filter}
-            extraData={catalogVersion}
-            data={channels}
-            keyExtractor={(c) => c.id}
-            numColumns={COLUMNS}
-            renderItem={renderChannelItem}
-            columnWrapperStyle={styles.row}
-            contentContainerStyle={styles.grid}
-            initialNumToRender={18}
-            maxToRenderPerBatch={18}
-            windowSize={7}
-            removeClippedSubviews
-            ListHeaderComponent={
-              <Txt size={12} color={colors.textDim} style={styles.count}>
-                {channels.length} channels in the directory
-              </Txt>
-            }
-          />
-        </>
-      ) : (
-        <View style={{ flex: 1 }}>
-          <View style={styles.isolatedNotice}>
-            <Ionicons name="lock-closed" size={16} color={colors.red} />
-            <Txt
-              size={12}
-              color={colors.textSoft}
-              style={{ marginLeft: 8, flex: 1 }}
-            >
-              Isolated Feed: This section is strictly separate and isolated from
-              the rest of the application.
-            </Txt>
-          </View>
-
-          <FlatList
-            ListHeaderComponent={
-              adultTitles.length ? (
-                <PosterRow
-                  title="Movies & Series (18+)"
-                  items={adultTitles}
-                  onPressTitle={(title) =>
-                    navigation.navigate("Title", { id: title.id })
-                  }
-                />
-              ) : undefined
-            }
-            extraData={catalogVersion}
-            data={ADULT_CHANNELS}
-            keyExtractor={(item) => item.id}
-            renderItem={renderAdultItem}
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingBottom: 40,
-              paddingTop: 10,
-            }}
-            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-          />
-        </View>
-      )}
-    </View>
-  );
+  useEffect(() => { void initializeEngine(); return () => request.current?.abort(); }, []);
+  const channels = useMemo(() => {
+    const terms = query.normalize('NFKC').toLowerCase().trim().split(/\s+/).filter(Boolean);
+    return filterChannels(filter).filter(channel => terms.every(term => `${channel.name} ${channel.category} ${channel.country}`.normalize('NFKC').toLowerCase().includes(term)));
+  }, [query, filter, catalogVersion]);
+  return <View style={styles.root}><ScreenHeader title="Live TV" back /><FlatList data={channels} keyExtractor={row => row.id} initialNumToRender={12} maxToRenderPerBatch={12} windowSize={7} contentContainerStyle={styles.content} refreshing={loading} onRefresh={refresh}
+    ListHeaderComponent={<><Txt weight="bold" size={24}>A separate live directory.</Txt><Txt style={styles.space} color={colors.textMuted} size={14}>Channel listings are unverified candidates, not a promise of access or a live signal. Movie and series searches never include this directory.</Txt><TextInput accessibilityLabel="Search live channels" placeholder="Search channels in this directory" placeholderTextColor={colors.textDim} value={query} onChangeText={setQuery} maxLength={200} autoCorrect={false} style={styles.input} /><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>{CHANNEL_FILTERS.map(value => <Chip key={value} label={value} selected={filter === value} onPress={() => setFilter(value)} />)}</ScrollView><Button label={loading ? 'Refreshing…' : 'Refresh live directory'} variant="secondary" disabled={loading} onPress={refresh} />{error ? <Txt accessibilityRole="alert" color={colors.warning} style={styles.space}>{error}</Txt> : null}<Txt color={colors.textDim} size={12} style={styles.count}>{channels.length} listed channels · sources checked on request</Txt></>}
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.name}. Check live source.`} onPress={() => navigation.navigate('Live', { channelId: item.id, filter })} style={({ pressed }) => [styles.channel, pressed && { backgroundColor: colors.surface2 }]}><ChannelLogo channel={item} size={64} /><View style={{ flex: 1 }}><Txt weight="semibold" size={16}>{item.name}</Txt><Txt size={12} color={colors.textMuted} style={{ marginTop: 4 }}>{[item.country, item.category].filter(Boolean).join(' · ')}</Txt><Txt size={12} color={colors.textDim} style={{ marginTop: 4 }}>Source unverified</Txt></View><Ionicons name="arrow-forward" size={20} color={colors.accent} /></Pressable>}
+    ListEmptyComponent={<View style={styles.empty}><Txt weight="bold">No matching channel entries</Txt><Txt color={colors.textMuted} size={13} style={styles.space}>Refresh the directory or change your channel filter. No restricted-content feed is enabled.</Txt></View>} /></View>;
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  sectionSwitcher: {
-    flexDirection: "row",
-    marginHorizontal: 12,
-    marginVertical: 10,
-    backgroundColor: colors.surface1,
-    borderRadius: radius.md,
-    padding: 3,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.08)",
-  },
-  switchBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: radius.sm,
-  },
-  switchBtnActive: { backgroundColor: colors.surface3 },
-  switchBtnAdultActive: { backgroundColor: colors.red },
-  chips: { paddingHorizontal: 12, paddingBottom: 10, gap: 8 },
-  grid: { paddingHorizontal: 12, paddingBottom: 40 },
-  row: { gap: 8, marginBottom: 14 },
-  count: { marginBottom: 10, paddingHorizontal: 2 },
-  meta: { flexDirection: "row", alignItems: "center", marginTop: 3 },
-  liveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: colors.red,
-    marginRight: 5,
-  },
-  isolatedNotice: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 10,
-    backgroundColor: colors.surface2,
-    padding: 10,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(229,9,20,0.3)",
-  },
-  adultCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface2,
-    padding: 14,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.08)",
-  },
-  adultBadge: {
-    backgroundColor: colors.red,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  adultIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.surface3,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  playIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surface4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: colors.bg }, content: { padding: 16, paddingBottom: 40, maxWidth: 840, alignSelf: 'center', width: '100%' }, space: { marginTop: 12 }, input: { minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface1, color: colors.text, paddingHorizontal: 14, fontSize: 15, marginTop: 20 }, filters: { gap: 8, paddingVertical: 14 }, count: { marginTop: 20, marginBottom: 12 }, channel: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 14, minHeight: 100, backgroundColor: colors.surface1, borderRadius: 16, marginBottom: 10 }, empty: { padding: 24, borderRadius: 16, backgroundColor: colors.surface1 } });

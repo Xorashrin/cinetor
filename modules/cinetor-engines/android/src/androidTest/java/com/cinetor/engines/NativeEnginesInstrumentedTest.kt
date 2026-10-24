@@ -104,6 +104,16 @@ class NativeEnginesInstrumentedTest {
         assertEquals(emptyMap<String, Any?>(), host.settings.read("cinetor-bbb-nuvio", "another-profile"))
     }
 
+    @Test fun downloadCandidatesMatchNativePackagingFormats() {
+        val entry = host.store.entry("cinetor-bbb-nuvio")
+        for ((extension, expected) in mapOf("mp4" to true, "m3u8" to true, "mpd" to true, "mkv" to false, "webm" to false)) {
+            val node = Json.parse("""{"url":"https://media.w3.org/owned-fixture.$extension","downloadable":true}""")
+            assertEquals(extension, expected, StreamNormalizer.nuvio(node, entry)["downloadable"])
+        }
+        val disabled = Json.parse("""{"url":"https://media.w3.org/owned-fixture.mp4","downloadable":false}""")
+        assertEquals(false, StreamNormalizer.nuvio(disabled, entry)["downloadable"])
+    }
+
     @Test fun urlDomCryptoHostRoundTripsAndIsolation() = runBlocking {
         val code = """
             module.exports.getStreams = async () => {

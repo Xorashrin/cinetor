@@ -218,12 +218,14 @@ test('details fetch credits/external IDs and seasons on demand with actual names
   assert.equal(detailed?.imdbId, 'tt0944947');
   assert.deepEqual(detailed?.cast, ['Peter Dinklage', 'Lena Headey']);
   assert.deepEqual(detailed?.creators, ['David Benioff', 'D. B. Weiss']);
-  assert.equal(detailed?.seasons.length, 2);
-  assert.equal(detailed?.seasons[0]?.episodes[0]?.name, 'Winter Is Coming');
-  assert.equal(detailed?.seasons[0]?.episodes[0]?.posterUrl, 'https://image.tmdb.org/t/p/w300/wI3pV6ey3e3B9z7pmBGg0P3q61K.jpg');
-  assert.equal(detailed?.seasons[0]?.episodes[0]?.id, 'tmdb:tv:1399:s1e1');
-  assert.deepEqual(detailed?.seasons[0]?.episodes[0]?.sources, []);
-  assert.equal(detailed?.seasons[1]?.episodes.length, 0);
+  assert.equal(detailed?.seasons.length, 3);
+  assert.equal(detailed?.seasons[0]?.number, 0);
+  assert.equal(detailed?.seasons[0]?.episodes.length, 0);
+  assert.equal(detailed?.seasons[1]?.episodes[0]?.name, 'Winter Is Coming');
+  assert.equal(detailed?.seasons[1]?.episodes[0]?.posterUrl, 'https://image.tmdb.org/t/p/w300/wI3pV6ey3e3B9z7pmBGg0P3q61K.jpg');
+  assert.equal(detailed?.seasons[1]?.episodes[0]?.id, 'tmdb:tv:1399:s1e1');
+  assert.deepEqual(detailed?.seasons[1]?.episodes[0]?.sources, []);
+  assert.equal(detailed?.seasons[2]?.episodes.length, 0);
   const count = calls.length;
   await catalog.detail('tmdb:tv:1399');
   assert.equal(calls.length, count);
@@ -231,7 +233,7 @@ test('details fetch credits/external IDs and seasons on demand with actual names
   assert.equal(second?.episodes[0]?.name, 'The North Remembers');
   const reloaded = new CineHdCatalog(storage, async () => null, async () => { throw new Error('offline'); });
   await reloaded.load();
-  assert.equal((await reloaded.detail('tmdb:tv:1399'))?.seasons[1]?.episodes[0]?.name, 'The North Remembers');
+  assert.equal((await reloaded.detail('tmdb:tv:1399'))?.seasons[2]?.episodes[0]?.name, 'The North Remembers');
 });
 
 test('cache hydration strips stream URLs and unsafe artwork, malformed responses retain the catalog', async () => {

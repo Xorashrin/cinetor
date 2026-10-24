@@ -50,3 +50,10 @@ __pycache__/
 
 # Local engineering recovery logs
 .gravitas/
+.claude/worktrees/
+modules/**/android/build/
+modules/**/android/.gradle/
+modules/**/fixtures/**/build/
+modules/**/fixtures/**/.gradle/
+artifacts/
+assets/cinetor-*.png

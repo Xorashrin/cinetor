@@ -9,6 +9,19 @@ import subprocess
 import zipfile
 
 
+def verify_certificate(signatures: str, expected: str) -> str:
+    signers = re.search(r'^Number of signers:\s*(\d+)\s*$', signatures, re.MULTILINE)
+    certificates = {value.lower() for value in re.findall(
+        r'^(?:Signer #\d+|V\d+(?:\.\d+)? Signer):? certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$',
+        signatures, re.MULTILINE)}
+    if not signers or signers.group(1) != '1' or len(certificates) != 1:
+        raise SystemExit('APK must report exactly one signer and one certificate SHA-256 digest')
+    certificate = next(iter(certificates))
+    if not re.fullmatch(r'[0-9a-f]{64}', expected) or certificate != expected:
+        raise SystemExit('APK signing certificate differs from the recorded v1.1.1 update certificate')
+    return certificate
+
+
 def inspect(apk: Path, commit: str, output: Path):
     sdk = Path(os.environ.get('ANDROID_HOME', os.environ.get('ANDROID_SDK_ROOT', '')))
     candidates = [p for p in (sdk / 'build-tools').glob('*') if (p / 'aapt').exists()]
@@ -20,9 +33,13 @@ def inspect(apk: Path, commit: str, output: Path):
     if not match:
         raise SystemExit('APK package metadata missing')
     package, code, version = match.groups()
-    if package != 'com.cinator.app' or version != '1.1.1' or code != '6':
+    root = Path(__file__).resolve().parents[1]
+    config = json.loads((root / 'app.json').read_text())['expo']
+    signing = json.loads((root / 'config/android-signing.json').read_text())
+    if package != config['android']['package'] or package != signing['package'] or version != config['version'] or code != str(config['android']['versionCode']):
         raise SystemExit(f'Unexpected APK identity: {match.group(0)}')
     signatures = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--verbose', '--print-certs', str(apk)], text=True)
+    certificate = verify_certificate(signatures, signing['expectedCertificateSha256'])
     with zipfile.ZipFile(apk) as archive:
         names = archive.namelist()
         if 'assets/index.android.bundle' not in names:
@@ -33,13 +50,13 @@ def inspect(apk: Path, commit: str, output: Path):
         debuggable = subprocess.check_output([str(tools / 'aapt'), 'dump', 'xmltree', str(apk), 'AndroidManifest.xml'], text=True)
         if re.search(r'android:debuggable[^\n]*0xffffffff', debuggable):
             raise SystemExit('Deliverable manifest is debuggable')
-    digest = hashlib.file_digest(apk.open('rb'), 'sha256').hexdigest()
-    certificate = re.search(r'Signer #1 certificate SHA-256 digest: (\w+)', signatures)
+    with apk.open('rb') as archive:
+        digest = hashlib.file_digest(archive, 'sha256').hexdigest()
     evidence = dict(commit=commit, artifact='cinetor-android-release', file=apk.name, package=package,
                     version=version, versionCode=int(code), sizeBytes=apk.stat().st_size, sha256=digest,
                     architectures=arch, releaseVariant=True, debuggable=False,
-                    signing='Android debug certificate; NOT private distribution signing',
-                    certificateSha256=certificate.group(1) if certificate else None,
+                    signing=signing['signing'],
+                    certificateSha256=certificate, matchesRecordedUpdateCertificate=True,
                     signatureVerification=signatures.strip())
     output.write_text(json.dumps(evidence, indent=2) + '\n')
     print(json.dumps(evidence, indent=2))

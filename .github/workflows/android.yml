@@ -2,12 +2,12 @@ name: Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/cinetor-three-engine-redesign]
     paths-ignore: ['docs/**', 'README.md']
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: cinetor-release-${{ github.ref }}
@@ -16,7 +16,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 100
+    env:
+      CI: '1'
+      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -27,70 +30,100 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Install pinned Android SDK components
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
-      - name: Verify providers, offline downloads, and SDK compatibility
+      - name: Generate original Cinetor assets
+        run: python3 -I tools/make_cinetor_icons.py assets
+      - name: Verify TypeScript contracts and deterministic tests
+        shell: bash
         run: |
-          npm run typecheck
-          npm test
-          npx expo install --check
-          npx expo-doctor
-      - name: Generate Android project
+          set -euo pipefail
+          mkdir -p artifacts/checks
+          npm run typecheck 2>&1 | tee artifacts/checks/typecheck.log
+          npm test 2>&1 | tee artifacts/checks/typescript-tests.log
+          python3 -I -m unittest discover -s test/tools -p 'test_*.py' 2>&1 | tee artifacts/checks/release-tools-tests.log
+          npx expo install --check 2>&1 | tee artifacts/checks/expo-compatibility.log
+          npx expo-doctor 2>&1 | tee artifacts/checks/expo-doctor.log
+      - name: Generate secure Android project
         run: npm run prebuild:android
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build universal Android release variant
-        working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64 --no-daemon
-      - name: Sign and inspect release deliverable
+      - name: Build the reviewed native host for the owned fixture
+        shell: bash
         run: |
+          set -euo pipefail
+          ./android/gradlew -p android :cinetor-engines:assembleRelease -Pcinetor.fixtureBootstrap=true --no-daemon 2>&1 | tee artifacts/checks/native-host.log
+          python3 -I tools/fetch_engine_sources.py --prepare-fixture --host-aar modules/cinetor-engines/android/build/outputs/aar/cinetor-engines-release.aar
+          ./android/gradlew -p modules/cinetor-engines/fixtures/cloudstream assembleRelease --no-daemon 2>&1 | tee artifacts/checks/cloudstream-fixture.log
+          python3 -I tools/fetch_engine_sources.py --package-fixture --fixture-apk modules/cinetor-engines/fixtures/cloudstream/build/outputs/apk/release/cloudstream-release-unsigned.apk
+      - name: Run native BDIX and media policy tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./android/gradlew -p android :cinetor-bdix:testDebugUnitTest :cinetor-media:testReleaseUnitTest --no-daemon 2>&1 | tee artifacts/checks/native-unit-tests.log
+          python3 -I tools/verify_native_tests.py --root modules/cinetor-bdix/android/build/test-results/testDebugUnitTest --require-class BdixPolicyTest --require-class BdixHttpFixtureTest --require-class BdixFtpFixtureTest --require-class BdixFtpsFixtureTest --output artifacts/checks/bdix-tests.json
+          python3 -I tools/verify_native_tests.py --root modules/cinetor-media/android/build/test-results/testReleaseUnitTest --require-class MediaSafetyTest --output artifacts/checks/media-tests.json
+      - name: Build universal Android release variant
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./android/gradlew -p android :app:assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64 --no-daemon 2>&1 | tee artifacts/checks/android-release.log
+      - name: Sign and inspect release deliverable
+        shell: bash
+        run: |
+          set -euo pipefail
           mkdir -p builds/release
-          cp android/app/build/outputs/apk/release/app-release.apk builds/release/cinetor-v1.1.1-release.apk
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          cp android/app/build/outputs/apk/release/app-release.apk builds/release/cinetor-v2.0.0-release.apk
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           # Expo defaults to its development certificate. This is a release variant,
           # but is explicitly NOT a privately signed distribution release.
-          "$APKSIGNER" sign --ks android/app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true builds/release/cinetor-v1.1.1-release.apk
-          python3 tools/verify_apk.py builds/release/cinetor-v1.1.1-release.apk --commit "$GITHUB_SHA" --output builds/release/release-evidence.json
-          cd builds/release
-          sha256sum cinetor-v1.1.1-release.apk > SHA256SUMS
+          "$APKSIGNER" sign --ks android/app/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true builds/release/cinetor-v2.0.0-release.apk
+          python3 -I tools/verify_apk.py builds/release/cinetor-v2.0.0-release.apk --commit "$GITHUB_SHA" --output builds/release/release-evidence.json
+      - name: Prepare corresponding source and exact application source
+        run: |
+          python3 -I tools/fetch_engine_sources.py --source-bundle --output artifacts/engine-corresponding-source
+          git archive --format=tar --prefix=cinetor/ "$GITHUB_SHA" | gzip -n > artifacts/engine-corresponding-source/cinetor-app-source.tar.gz
+          cp modules/cinetor-engines/android/generated-assets/cinetor/owned-fixture.json artifacts/engine-corresponding-source/owned-fixture.json
+          tar -czf builds/release/cinetor-v2.0.0-corresponding-source.tar.gz -C artifacts engine-corresponding-source
       - name: Enable Android emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Verify release startup on Android 15
+      - name: Verify native engines and signed startup on Android 15
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           target: default
           arch: x86_64
           disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048
-          script: python3 tools/android_smoke.py builds/release/cinetor-v1.1.1-release.apk --output builds/release/startup-evidence.json
-      - uses: actions/upload-artifact@v5
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 3072
+          script: |
+            ./android/gradlew -p android :cinetor-engines:connectedReleaseAndroidTest --no-daemon
+            python3 -I tools/verify_native_tests.py --root modules/cinetor-engines/android/build/outputs/androidTest-results/connected --require-class NativeEnginesInstrumentedTest --output artifacts/checks/native-engine-tests.json
+            python3 -I tools/android_smoke.py builds/release/cinetor-v2.0.0-release.apk --output builds/release/startup-evidence.json
+      - name: Bind verification records and checksums to the deliverable
+        run: |
+          cp artifacts/checks/bdix-tests.json artifacts/checks/media-tests.json artifacts/checks/native-engine-tests.json builds/release/
+          cp config/engine-lock.json config/android-signing.json builds/release/
+          cp LICENSE LICENSES.md builds/release/
+          cp -R licenses builds/release/licenses
+          python3 -I -c 'import hashlib,pathlib; root=pathlib.Path("builds/release"); paths=sorted(p for p in root.rglob("*") if p.is_file() and p.name!="SHA256SUMS"); (root/"SHA256SUMS").write_text("".join(hashlib.sha256(p.read_bytes()).hexdigest()+"  "+str(p.relative_to(root))+"\n" for p in paths))'
+      - name: Upload passing release candidate with corresponding source
+        uses: actions/upload-artifact@v5
         with:
-          name: cinetor-android-release
+          name: cinetor-v2.0.0-${{ github.sha }}
           path: builds/release/
           if-no-files-found: error
           retention-days: 30
-      - name: Publish commit-bound APK download
-        uses: softprops/action-gh-release@v2
+      - name: Preserve verification logs and native reports
+        if: always()
+        uses: actions/upload-artifact@v5
         with:
-          tag_name: v1.1.1
-          target_commitish: ${{ github.sha }}
-          name: Cinetor v1.1.1 Android release variant
-          prerelease: false
-          make_latest: true
-          body: |
-            CineHD metadata and provider integration with native ad-free navigation.
-            Metadata/search/details/episodes use the observed public metadata proxy.
-            Native AWSIND resolver and IPTV directory replace the previous sources.
-            Native source selection and MP4/finite HLS offline downloads are included.
-
-            Built from commit ${{ github.sha }}. Package com.cinator.app, version 1.1.1 (6).
-            Universal arm64-v8a / armeabi-v7a / x86_64 release variant with embedded Hermes bundle.
-            Signed with Android's debug certificate; private distribution signing is not configured.
-            Android 15 startup is checked on this signed APK before publication.
-            Actual provider/device playback availability is documented in docs/CINEHD_IMPLEMENTATION_REPORT.md.
-            See release-evidence.json, startup-evidence.json, and SHA256SUMS for artifact verification.
-          files: |
-            builds/release/cinetor-v1.1.1-release.apk
-            builds/release/release-evidence.json
-            builds/release/SHA256SUMS
-            builds/release/startup-evidence.json
+          name: cinetor-checks-${{ github.sha }}
+          path: |
+            artifacts/checks/
+            modules/*/android/build/reports/
+            modules/*/android/build/test-results/
+            modules/cinetor-engines/android/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 30

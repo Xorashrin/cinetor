@@ -25,7 +25,7 @@ interface ArtworkProps {
 /** Missing or failed artwork stays an app-owned, neutral image frame. */
 export function CatalogArtwork({ uri, identity, style }: ArtworkProps) {
   const [failedUri, setFailedUri] = useState<string>();
-  const sourceUri = typeof uri === 'string' && /^https?:\/\//i.test(uri) ? uri : undefined;
+  const sourceUri = typeof uri === 'string' && /^https:\/\//i.test(uri) ? uri : undefined;
   return (
     <View style={[styles.artwork, style]} accessible={false} importantForAccessibility="no-hide-descendants">
       <Ionicons name="image-outline" size={26} color={colors.textDim} />

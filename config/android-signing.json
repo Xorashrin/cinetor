@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "package": "com.cinator.app",
+  "expectedCertificateSha256": "fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c",
+  "signing": "Android debug certificate; NOT private distribution signing",
+  "baseline": {
+    "sourceCommit": "381e421a3959eabe73d7787dbff11dc15c3847c3",
+    "artifact": "cinetor-v1.1.1-release.apk",
+    "apkSha256": "8ef5f4a6579de61a0032069ac622f93d3b7697feaa64ad9c9d7dca79f3ab0895",
+    "evidence": "The v1.1.1 release-evidence.json signatureVerification text records the V3.0 signer certificate digest. Its certificateSha256 field was null because the historical parser expected the older apksigner output format."
+  }
+}
