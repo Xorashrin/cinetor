@@ -22,8 +22,8 @@ Review found and corrected a standalone Cloudstream fixture JVM-target mismatch 
 
 - Local repository, source, configuration, and contract inspection: performed.
 - Typecheck, tests, dependency installation, Gradle/JVM execution, bundling, app execution, and emulator work on the development PC: **not run**, by instruction.
-- Cloud run `40116956454` at commit `d65f0af` passed typechecking, deterministic checks, source-mode Expo compilation, pinned host/fixture assembly, all 16 BDIX tests, all eight Media3 policy tests, universal APK assembly, and APK identity/signature inspection.
-- Native instrumentation ran 12 tests: eight passed and four failed. The failures concern Nuvio promise results and typed ZIP rejection. Signed-APK startup and final release artifact publication did not run. The assembled APK is not a delivered release candidate.
+- Cloud run [`40121000750`](https://github.com/Xorashrin/cinetor/actions/runs/40121000750) at commit `7f5e25100d0c2c23654ae583b37e5c31dde6d6aa` passed every required build stage, native instrumentation, exact signed-APK startup, source packaging, and final artifact publication.
+- The commit-bound [release APK and corresponding source](https://github.com/Xorashrin/cinetor/actions/runs/40121000750/artifacts/12571792317) are published as an Actions artifact. This is not a public GitHub Release. The artifact expires on November 23, 2026.
 - Broad third-party extension coverage, real BDIX endpoint playback, physical ARM-device playback, and performance benchmarks: **not established**.
 - Only two reviewed fixture IDs are admitted. A historical manifest count or successful HTTP response is not decoded playback proof.
 
@@ -41,7 +41,9 @@ Run `40116956454` produced a 98,726,322-byte APK for `com.cinator.app` version 2
 
 Nuvio stream and settings invocations now explicitly await their QuickJS promise before converting the result to JSON. Existing native cancellation, request deadlines, byte limits, and pinned binding sources remain unchanged. Device regression coverage now includes synchronous/asynchronous settings, rejected promises, and never-settled settings promises, alongside the existing stream and cancellation cases.
 
-Android 14+ ZIP path validation can throw `ZipException` before Cinetor's entry checks run. Archive validation now converts that exception into the existing `ARCHIVE` engine failure without disabling platform validation or changing admission rules. Tests retain resource/ABI/traversal rejection, require exact error codes, and add absolute-path and malformed-ZIP cases. These corrections require a new cloud run; no local tests or app execution were performed.
+Android 14+ ZIP path validation can throw `ZipException` before Cinetor's entry checks run. Archive validation now converts that exception into the existing `ARCHIVE` engine failure without disabling platform validation or changing admission rules. Tests retain resource/ABI/traversal rejection, require exact error codes, and add absolute-path and malformed-ZIP cases. These corrections passed the complete cloud release workflow in run `40121000750`; no local tests or app execution were performed.
+
+Final downloaded-artifact inspection confirmed all 21 checksums and the exact APK hash shared by release and startup evidence. The passing run recorded 92 TypeScript, eight Python release-tool, 16 BDIX, eight media, and 13 native engine tests, with no failed or skipped cases. The signed APK rendered its Home and Anime navigation on Android 15/x86_64. Full playback, download, and physical-device acceptance remain outside this startup smoke. The exact release identity and limitations are recorded in [ENGINE_VERIFICATION.md](ENGINE_VERIFICATION.md).
 
 ## Historical evidence
 

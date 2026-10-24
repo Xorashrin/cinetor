@@ -6,7 +6,21 @@ The 2.0.0 integration has been inspected at the source level. No local dependenc
 
 The initial handoff stopped after one source push. After the user reported the SDK setup failure, they requested a corrected release APK through Actions. Follow-up verification therefore runs in the cloud; no local execution restriction has changed.
 
-Run `40116956454` at commit `d65f0af` assembled and inspected the signed universal APK after all 16 BDIX and eight media unit tests passed. Eight of 12 native engine instrumentation tests passed, including manual interruption and real Cloudstream DEX/resource loading. Four failed on promise-result handling and archive error typing. Startup smoke and the final release artifact remained blocked. Follow-up source fixes and expanded settings/archive regressions require a new passing cloud run.
+Run [`40121000750`](https://github.com/Xorashrin/cinetor/actions/runs/40121000750) passed the complete release workflow at commit `7f5e25100d0c2c23654ae583b37e5c31dde6d6aa`. All required stages succeeded, including native engine instrumentation, exact signed-APK startup, source packaging, and final artifact publication. The optional lock-refresh job was intentionally skipped. The commit-bound [APK and source artifact](https://github.com/Xorashrin/cinetor/actions/runs/40121000750/artifacts/12571792317) is available until November 23, 2026.
+
+The preceding run `40116956454` at commit `d65f0af` assembled and inspected the signed universal APK, but four native instrumentation tests failed on promise-result handling and archive error typing. The verified repair explicitly awaits Nuvio stream/settings results and preserves typed Android ZIP rejection. Expanded settings and malformed-archive regressions remain required gates; no failed check was disabled.
+
+### Verified release receipt
+
+- APK: `cinetor-v2.0.0-release.apk`, 98,726,322 bytes; package `com.cinator.app`, version 2.0.0/code 7.
+- APK SHA-256: `b5fd12f1217ba7ca30f972052475a49029aa86b70cb6266c8c2945b2922be099`.
+- Minimum Android API: 26 (Android 8.0); target API: 36. Packaged native ABIs: `armeabi-v7a`, `arm64-v8a`, and `x86_64`.
+- Cloud tests passed: 92 TypeScript tests, eight Python release-tool tests, 16 BDIX unit tests, eight media unit tests, and 13 native engine instrumentation tests. None failed or were skipped.
+- The exact signed APK rendered Home and Anime navigation on Android 15/API 35, x86_64. The smoke recorded 5.2 seconds; this single emulator observation is not a performance benchmark or playback result.
+- After download, all 21 files listed in `SHA256SUMS` matched, with no unlisted deliverable files. The APK hash matched both release inspection and startup evidence.
+- Signing remains the historical Android debug certificate, SHA-256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`. This is a nondebuggable release variant, not privately signed distribution packaging.
+
+The archive includes corresponding source, license notices, engine/signing pins, native test reports, startup evidence, and checksums. Evidence documentation committed after the build does not change the APK's recorded source commit.
 
 ## Cloud workflow
 
