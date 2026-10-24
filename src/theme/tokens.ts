@@ -1,37 +1,44 @@
-// Design tokens. Values come from the REA resource evidence (docs/NETFLIX_A_TO_Z.md, M01).
 import { Easing } from 'react-native-reanimated';
 
+// Cinetor uses warm coral on dark ink. Legacy color names remain API aliases.
 export const colors = {
-  red: '#E50914',
-  redPressed: '#C11119',
-  redLight: '#EB3942',
-  blue: '#0071EB',
+  accent: '#FF967E',
+  accentPressed: '#E97E67',
+  accentSoft: '#33252A',
+  onAccent: '#21130F',
+  red: '#FF967E',
+  redPressed: '#E97E67',
+  redLight: '#FFB29F',
+  blue: '#A1C8FF',
 
-  bg: '#000000',
-  surface0: '#0F0F0F',
-  surface1: '#121212',
-  surface2: '#1F1F1F',
-  surface3: '#232323',
-  surface4: '#262626',
-  surface5: '#333333',
-  surface6: '#414141',
-  border: '#4D4D4D',
+  bg: '#0B1017',
+  surface0: '#101720',
+  surface1: '#151E29',
+  surface2: '#1C2735',
+  surface3: '#243142',
+  surface4: '#2C3A4C',
+  surface5: '#35455A',
+  surface6: '#455870',
+  border: '#526379',
+  borderSubtle: '#2B3849',
 
-  text: '#FFFFFF',
-  text90: 'rgba(255,255,255,0.9)',
-  text80: 'rgba(255,255,255,0.8)',
-  text70: 'rgba(255,255,255,0.7)',
-  textMuted: '#BDBDBD',
-  textSoft: '#C3C3C3',
-  textDim: '#808080',
-  textFaint: '#737373',
-  link: '#E6E6E6',
+  text: '#F6F2ED',
+  text90: '#E9E7E4',
+  text80: '#D2D7DF',
+  text70: '#BCC7D4',
+  textMuted: '#BCC7D4',
+  textSoft: '#D2D7DF',
+  textDim: '#A3B1C2',
+  textFaint: '#9BA9BA',
+  link: '#FFB29F',
 
-  success: '#5FA53F',
-  love: '#3F54FF',
-  scrim: 'rgba(0,0,0,0.5)',
-  overlay: 'rgba(0,0,0,0.88)',
-  glassButton: 'rgba(109,109,110,0.55)',
+  success: '#9AD5AE',
+  warning: '#F1C887',
+  danger: '#FFB3AD',
+  love: '#FFB29F',
+  scrim: 'rgba(4,8,13,0.62)',
+  overlay: 'rgba(4,8,13,0.94)',
+  glassButton: 'rgba(28,39,53,0.94)',
 } as const;
 
 export const space = {
@@ -47,11 +54,11 @@ export const space = {
 } as const;
 
 export const radius = {
-  xs: 2,
-  sm: 4,
-  md: 6,
-  lg: 8,
-  xl: 12,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
   pill: 999,
 } as const;
 
@@ -62,35 +69,37 @@ export const font = {
   bold: 'Inter_700Bold',
   extrabold: 'Inter_800ExtraBold',
   black: 'Inter_900Black',
-  display: 'BebasNeue_400Regular',
+  display: 'Inter_700Bold',
 } as const;
 
 export type FontWeight = keyof typeof font;
 
 export const textSize = {
-  micro: 10,
+  micro: 11,
   caption: 12,
   small: 13,
-  body: 14,
-  bodyLarge: 16,
-  title: 18,
-  heading: 20,
-  display: 24,
+  body: 15,
+  bodyLarge: 17,
+  title: 19,
+  heading: 24,
+  display: 32,
 } as const;
 
 export const motion = {
-  fast: 150,
-  base: 220,
-  slow: 300,
-  slower: 400,
+  fast: 120,
+  base: 180,
+  slow: 240,
+  slower: 320,
   standard: Easing.bezier(0.4, 0, 0.2, 1),
   decelerate: Easing.bezier(0, 0, 0.2, 1),
   accelerate: Easing.bezier(0.4, 0, 1, 1),
 } as const;
 
 export const layout = {
-  gutter: 12,
-  headerHeight: 52,
-  chipRowHeight: 48,
-  tabBarHeight: 58,
+  gutter: 16,
+  headerHeight: 64,
+  chipRowHeight: 56,
+  tabBarHeight: 72,
+  minTouchTarget: 48,
+  maxContentWidth: 840,
 } as const;

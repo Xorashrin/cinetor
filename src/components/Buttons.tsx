@@ -1,8 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radius } from '../theme/tokens';
+import { colors, layout, radius } from '../theme/tokens';
 import { Txt } from './Txt';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -12,45 +12,51 @@ interface ButtonProps {
   label: string;
   onPress?: () => void;
   icon?: IoniconName;
-  variant?: 'white' | 'gray' | 'red' | 'glass' | 'outline';
+  variant?: 'primary' | 'secondary' | 'white' | 'gray' | 'red' | 'glass' | 'outline';
   height?: number;
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
   loading?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
   children?: React.ReactNode;
 }
 
+const PRIMARY = { bg: colors.accent, pressed: colors.accentPressed, fg: colors.onAccent, border: colors.accent };
+const SECONDARY = { bg: colors.surface2, pressed: colors.surface3, fg: colors.text, border: colors.border };
 const VARIANTS = {
-  white: { bg: colors.text, pressed: '#D6D6D6', fg: '#000000', border: 'transparent' },
-  gray: { bg: colors.surface4, pressed: colors.surface5, fg: colors.text, border: 'transparent' },
-  red: { bg: colors.red, pressed: colors.redPressed, fg: colors.text, border: 'transparent' },
-  glass: { bg: colors.glassButton, pressed: 'rgba(109,109,110,0.8)', fg: colors.text, border: 'transparent' },
-  outline: { bg: 'transparent', pressed: 'rgba(255,255,255,0.08)', fg: colors.text, border: colors.textDim },
+  primary: PRIMARY,
+  secondary: SECONDARY,
+  white: { bg: colors.text, pressed: colors.text80, fg: colors.bg, border: colors.text },
+  gray: SECONDARY,
+  red: PRIMARY,
+  glass: { bg: colors.glassButton, pressed: colors.surface3, fg: colors.text, border: colors.border },
+  outline: { bg: 'transparent', pressed: colors.surface2, fg: colors.text, border: colors.border },
 } as const;
 
-export function Button({ label, onPress, icon, variant = 'white', height = 40, style, disabled, loading, children }: ButtonProps) {
+export function Button({ label, onPress, icon, variant = 'primary', height = 48, style, disabled, loading, accessibilityLabel, accessibilityHint, children }: ButtonProps) {
+  const [focused, setFocused] = useState(false);
   const v = VARIANTS[variant];
   return (
     <Pressable
       onPress={onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }}
       style={({ pressed }) => [
         styles.button,
-        { height, backgroundColor: pressed ? v.pressed : v.bg, borderColor: v.border, opacity: disabled ? 0.45 : 1 },
+        { backgroundColor: pressed ? v.pressed : v.bg, borderColor: focused ? colors.text : v.border, opacity: disabled ? 0.5 : 1 },
         style,
+        { minWidth: layout.minTouchTarget, minHeight: Math.max(layout.minTouchTarget, height) },
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={v.fg} />
-      ) : (
-        <>
-          {children}
-          {icon ? <Ionicons name={icon} size={height * 0.55} color={v.fg} style={styles.icon} /> : null}
-          <Txt weight="bold" size={15} color={v.fg}>
-            {label}
-          </Txt>
-        </>
-      )}
+      {loading ? <ActivityIndicator color={v.fg} /> : icon ? <Ionicons name={icon} size={22} color={v.fg} accessible={false} /> : null}
+      {children}
+      <Txt weight="semibold" size={14} color={v.fg} align="center" style={styles.label}>{label}</Txt>
     </Pressable>
   );
 }
@@ -63,14 +69,17 @@ interface ActionProps {
   width?: number;
 }
 
-/** Icon-over-label action (My List / Rate / Share on details, Remind Me on New & Hot). */
-export function IconAction({ label, icon, onPress, active, width = 64 }: ActionProps) {
+export function IconAction({ label, icon, onPress, active, width = 76 }: ActionProps) {
   return (
-    <Pressable onPress={onPress} hitSlop={6} style={({ pressed }) => [styles.action, { width, opacity: pressed ? 0.6 : 1 }]}>
-      <MaterialCommunityIcons name={icon} size={26} color={colors.text} />
-      <Txt size={11} color={active ? colors.text : colors.textMuted} align="center" style={styles.actionLabel} numberOfLines={1}>
-        {label}
-      </Txt>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: !!active }}
+      style={({ pressed }) => [styles.action, { width: Math.max(width, layout.minTouchTarget), backgroundColor: pressed ? colors.surface2 : 'transparent' }]}
+    >
+      <MaterialCommunityIcons name={icon} size={26} color={active ? colors.accent : colors.text} accessible={false} />
+      <Txt size={12} color={active ? colors.accent : colors.textMuted} align="center" style={styles.actionLabel}>{label}</Txt>
     </Pressable>
   );
 }
@@ -81,22 +90,38 @@ interface IconButtonProps {
   size?: number;
   color?: string;
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  disabled?: boolean;
 }
 
-export function IconButton({ icon, onPress, size = 24, color = colors.text, style }: IconButtonProps) {
+export function IconButton({ icon, onPress, size = 24, color = colors.text, style, accessibilityLabel, accessibilityHint, disabled }: IconButtonProps) {
+  const [focused, setFocused] = useState(false);
+  const defaultLabel = icon === 'arrow-back' ? 'Go back' : icon.replace(/-outline$/, '').replace(/-/g, ' ');
   return (
-    <Pressable onPress={onPress} hitSlop={10} style={({ pressed }) => [styles.iconButton, { opacity: pressed ? 0.6 : 1 }, style]}>
-      <Ionicons name={icon} size={size} color={color} />
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? defaultLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: !!disabled }}
+      style={({ pressed }) => [
+        styles.iconButton,
+        { backgroundColor: pressed ? colors.surface3 : 'transparent', borderColor: focused ? colors.accent : 'transparent', opacity: disabled ? 0.5 : 1 },
+        style,
+      ]}
+    >
+      <Ionicons name={icon} size={size} color={color} accessible={false} />
     </Pressable>
   );
 }
 
-export function CircleIconButton({ icon, onPress, size = 32 }: { icon: IoniconName; onPress?: () => void; size?: number }) {
-  return (
-    <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.circle, { width: size, height: size, borderRadius: size / 2, opacity: pressed ? 0.7 : 1 }]}>
-      <Ionicons name={icon} size={size * 0.6} color={colors.text} />
-    </Pressable>
-  );
+export function CircleIconButton({ icon, onPress, size = 48, accessibilityLabel }: { icon: IoniconName; onPress?: () => void; size?: number; accessibilityLabel?: string }) {
+  const target = Math.max(size, layout.minTouchTarget);
+  return <IconButton icon={icon} onPress={onPress} size={Math.min(28, target * 0.5)} accessibilityLabel={accessibilityLabel} style={{ width: target, height: target, borderRadius: target / 2, backgroundColor: colors.surface2 }} />;
 }
 
 export function ProgressBar({ value, height = 3, track = colors.surface6, style }: { value: number; height?: number; track?: string; style?: StyleProp<ViewStyle> }) {
@@ -108,17 +133,9 @@ export function ProgressBar({ value, height = 3, track = colors.surface6, style 
 }
 
 const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-  },
-  icon: { marginRight: 6 },
-  action: { alignItems: 'center' },
+  button: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  label: { flexShrink: 1 },
+  action: { minHeight: 72, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4, borderRadius: radius.md },
   actionLabel: { marginTop: 6 },
-  iconButton: { padding: 4 },
-  circle: { backgroundColor: 'rgba(40,40,40,0.85)', alignItems: 'center', justifyContent: 'center' },
+  iconButton: { minWidth: layout.minTouchTarget, minHeight: layout.minTouchTarget, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: radius.md },
 });

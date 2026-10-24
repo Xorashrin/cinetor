@@ -12,10 +12,11 @@ export interface TxtProps extends TextProps {
   spacing?: number;
 }
 
-export function Txt({ weight = 'regular', size = 14, color = colors.text, align, lineHeight, spacing, style, ...rest }: TxtProps) {
+export function Txt({ weight = 'regular', size = 15, color = colors.text, align, lineHeight, spacing, style, ...rest }: TxtProps) {
   return (
     <Text
-      maxFontSizeMultiplier={1.3}
+      allowFontScaling
+      maxFontSizeMultiplier={0}
       {...rest}
       style={[
         {
@@ -23,7 +24,7 @@ export function Txt({ weight = 'regular', size = 14, color = colors.text, align,
           fontSize: size,
           color,
           textAlign: align,
-          lineHeight: lineHeight ?? Math.round(size * 1.3),
+          lineHeight: lineHeight ?? Math.round(size * 1.45),
           letterSpacing: spacing,
           includeFontPadding: false,
         },

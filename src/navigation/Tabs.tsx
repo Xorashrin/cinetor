@@ -1,86 +1,67 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar } from '../components/Avatar';
-import { CreditPopup } from '../components/CreditPopup';
+import { Txt } from '../components/Txt';
 import AnimeScreen from '../screens/AnimeScreen';
 import HomeScreen from '../screens/HomeScreen';
 import KDramaScreen from '../screens/KDramaScreen';
-import LiveTvScreen from '../screens/LiveTvScreen';
+import OthersScreen from '../screens/OthersScreen';
 import ProfilesScreen from '../screens/ProfilesScreen';
-import { useApp } from '../state/AppState';
-import { colors, font } from '../theme/tokens';
+import { colors, layout, radius } from '../theme/tokens';
 import type { TabParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function ProfileTabIcon({ focused }: { focused: boolean }) {
-  const { activeProfile } = useApp();
-  if (!activeProfile) return <Ionicons name="person-circle-outline" size={26} color={focused ? colors.text : colors.textDim} />;
+function TabIcon({ focused, icon, color }: { focused: boolean; icon: IconName; color: string }) {
   return (
-    <View style={{ padding: 1.5, borderRadius: 5, borderWidth: 1.5, borderColor: focused ? colors.text : 'transparent' }}>
-      <Avatar profile={activeProfile} size={22} radius={3} />
+    <View style={[styles.icon, focused && styles.activeIcon]}>
+      <Ionicons name={icon} size={23} color={color} accessible={false} />
     </View>
   );
 }
 
 export function Tabs() {
+  const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   return (
-    <>
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: colors.text,
-          tabBarInactiveTintColor: colors.textDim,
-          tabBarStyle: { backgroundColor: 'rgba(0,0,0,0.97)', borderTopWidth: 0, elevation: 0 },
-          tabBarLabelStyle: { fontFamily: font.medium, fontSize: 10 },
-          sceneStyle: { backgroundColor: colors.bg },
-        }}
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="Anime"
-          component={AnimeScreen}
-          options={{
-            title: 'Anime',
-            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={24} color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="KDrama"
-          component={KDramaScreen}
-          options={{
-            title: 'K-Drama',
-            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'film' : 'film-outline'} size={24} color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="LiveTv"
-          component={LiveTvScreen}
-          options={{
-            title: 'Live TV',
-            tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'tv' : 'tv-outline'} size={24} color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="Profiles"
-          component={ProfilesScreen}
-          options={{
-            title: 'Profiles',
-            tabBarIcon: ({ focused }) => <ProfileTabIcon focused={focused} />,
-          }}
-        />
-      </Tab.Navigator>
-      <CreditPopup />
-    </>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        lazy: true,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textDim,
+        tabBarHideOnKeyboard: true,
+        tabBarLabelPosition: 'below-icon',
+        tabBarAllowFontScaling: true,
+        tabBarStyle: {
+          backgroundColor: colors.surface0,
+          borderTopColor: colors.borderSubtle,
+          borderTopWidth: 1,
+          height: layout.tabBarHeight + insets.bottom + Math.max(0, fontScale - 1) * 44,
+          paddingTop: 8,
+          paddingBottom: Math.max(insets.bottom, 8),
+          elevation: 0,
+        },
+        tabBarItemStyle: { minWidth: layout.minTouchTarget, minHeight: layout.minTouchTarget, paddingHorizontal: 1 },
+        tabBarLabel: ({ color }) => <Txt weight="semibold" size={11} color={color} align="center" style={styles.label}>{route.name === 'KDrama' ? 'K-Drama' : route.name}</Txt>,
+        sceneStyle: { backgroundColor: colors.bg },
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home', tabBarAccessibilityLabel: 'Home catalog', tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} icon={focused ? 'home' : 'home-outline'} /> }} />
+      <Tab.Screen name="Anime" component={AnimeScreen} options={{ title: 'Anime', tabBarAccessibilityLabel: 'Anime catalog', tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} icon={focused ? 'sparkles' : 'sparkles-outline'} /> }} />
+      <Tab.Screen name="KDrama" component={KDramaScreen} options={{ title: 'K-Drama', tabBarAccessibilityLabel: 'K-Drama catalog', tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} icon={focused ? 'film' : 'film-outline'} /> }} />
+      <Tab.Screen name="Others" component={OthersScreen} options={{ title: 'Others', tabBarAccessibilityLabel: 'Others catalog', tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} icon={focused ? 'albums' : 'albums-outline'} /> }} />
+      <Tab.Screen name="Profiles" component={ProfilesScreen} options={{ title: 'Profiles', tabBarAccessibilityLabel: 'Profiles and settings', tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} icon={focused ? 'person-circle' : 'person-circle-outline'} /> }} />
+    </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  icon: { minWidth: 48, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
+  activeIcon: { backgroundColor: colors.accentSoft },
+  label: { alignSelf: 'stretch', marginTop: 4, paddingHorizontal: 1 },
+});
