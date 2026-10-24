@@ -13,6 +13,20 @@ export interface PlaybackSourceRef {
   quality?: string;
   container?: string;
   fileSizeBytes?: number;
+  engine?: 'bdix' | 'nuvio' | 'cloudstream';
+  contentKey?: string;
+  providerVersion?: string;
+  providerHash?: string;
+  networkContext?: string;
+  credentialOrigin?: string;
+  headerOrigin?: string;
+  nativeToken?: string;
+  providerId?: string;
+  accessContext?: string;
+  locality?: 'approved-network' | 'internet';
+  subtitleTracks?: { url: string; language?: string; label?: string; mimeType?: string }[];
+  timelineId?: string;
+  representationId?: string;
 }
 
 export interface Episode {
@@ -90,10 +104,10 @@ export const SAMPLE_VIDEOS: string[] = [];
 
 export const DEFAULT_TITLE: Title = {
   id: 'empty',
-  name: 'Cinator',
+  name: 'Cinetor',
   kind: 'series',
-  year: 2026,
-  maturity: 'ALL',
+  year: 0,
+  maturity: 'UNRATED',
   runtime: 0,
   seasons: [],
   genres: [],
@@ -101,11 +115,11 @@ export const DEFAULT_TITLE: Title = {
   synopsis: '',
   cast: [],
   creators: [],
-  original: true,
-  seed: 'cinator',
-  tint: '#E50914',
+  original: false,
+  seed: 'cinetor',
+  tint: '#F56D50',
   video: '',
-  quality: ['HD', '5.1', 'CC'],
+  quality: [],
 };
 
 export const TITLES: Title[] = [];
@@ -133,9 +147,12 @@ export function findEpisode(title: Title, episodeId?: string): { season: Season;
 }
 
 export function nextEpisode(title: Title, episodeId: string): Episode | null {
-  const all = title.seasons.flatMap((s) => s.episodes);
-  const i = all.findIndex((e) => e.id === episodeId);
-  return i >= 0 && i + 1 < all.length ? all[i + 1] : null;
+  const current = findEpisode(title, episodeId);
+  if (!current || !episodeId.startsWith(`${title.id}:`) || current.season.number === 0) return null;
+  // A partially loaded or sparse season cannot authorize skipping to another season.
+  const expected = `${title.id}:s${current.season.number}e${current.episode.number + 1}`;
+  const matches = current.season.episodes.filter(episode => episode.id === expected && episode.number === current.episode.number + 1);
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export const AVAILABLE: Title[] = [];
@@ -167,6 +184,6 @@ export const GENRES = [
 ];
 
 export const MAIN_PROFILE_ID = 'main';
-export const PROFILE_COLOR = '#E50914';
+export const PROFILE_COLOR = '#F56D50';
 
 export const NOTIFICATIONS: AppNotification[] = [];

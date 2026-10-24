@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Episode, Season, Title } from '../data/mock';
 import { EngineError, type Storage } from '../engine/model';
+import { sectionFor, type CatalogSection } from '../engine/contracts';
 import {
   TmdbClient, TMDB_IMAGE_BASE, object,
   type CredentialGetter, type FetchLike, type TmdbClientOptions,
@@ -38,7 +39,7 @@ const MetadataTitle = z.object({
   id: z.string().regex(/^tmdb:(movie|tv):[1-9]\d*$/),
   name: z.string().min(1).max(300), kind: z.enum(['movie', 'series']),
   year: z.number().int().min(0).max(2200), runtime: z.number().min(0).max(2000),
-  seasons: z.array(z.object({ number: z.number().int().min(1).max(1000), episodes: z.array(MetadataEpisode).max(1000) })).max(100),
+  seasons: z.array(z.object({ number: z.number().int().min(0).max(1000), episodes: z.array(MetadataEpisode).max(1000) })).max(100),
   genres: z.array(z.string().max(80)).max(30), synopsis: z.string().max(5000),
   cast: z.array(z.string().max(300)).max(30), creators: z.array(z.string().max(300)).max(30),
   posterUrl: z.string().max(4096).optional(), backdropUrl: z.string().max(4096).optional(),
@@ -49,7 +50,7 @@ const MetadataTitle = z.object({
 });
 const Snapshot = z.object({
   schemaVersion: z.literal(1),
-  entries: z.array(z.object({ title: z.unknown(), detailed: z.boolean(), loadedSeasons: z.array(z.number().int().min(1).max(1000)).max(100) })).max(MAX_TITLES),
+  entries: z.array(z.object({ title: z.unknown(), detailed: z.boolean(), loadedSeasons: z.array(z.number().int().min(0).max(1000)).max(100) })).max(MAX_TITLES),
 });
 
 function textValue(input: unknown, limit = 300): string | undefined {
@@ -119,10 +120,8 @@ export class CineHdCatalog {
   }
   all(): TmdbTitle[] { return [...this.entries.values()].map(entry => entry.title); }
   get(id: string): TmdbTitle | undefined { return this.entries.get(id)?.title; }
-  query(category: 'home' | 'anime' | 'kdrama'): TmdbTitle[] {
-    return this.all().filter(title => category === 'home'
-      ? !title.genres.includes('Anime') && !title.genres.includes('K-Drama')
-      : title.genres.includes(category === 'anime' ? 'Anime' : 'K-Drama'));
+  query(category: CatalogSection): TmdbTitle[] {
+    return this.all().filter(title => sectionFor(title) === category);
   }
 
   async load(): Promise<void> {
@@ -142,7 +141,7 @@ export class CineHdCatalog {
       if (row.id !== `tmdb:${row.mediaType}:${row.tmdbId}` || row.kind !== (row.mediaType === 'tv' ? 'series' : 'movie')) continue;
       const title: TmdbTitle = {
         ...row,
-        maturity: 'UNRATED', moods: [], original: false, seed: row.id, tint: '#E50914',
+        maturity: 'UNRATED', moods: [], original: false, seed: row.id, tint: '#F56D50',
         video: '', sources: [], quality: [],
         posterUrl: cachedImage(row.posterUrl, 'w500'), backdropUrl: cachedImage(row.backdropUrl, 'w1280'),
         seasons: row.seasons.map(season => ({
@@ -200,7 +199,7 @@ export class CineHdCatalog {
     const seasons = new Map<number, Season>();
     if (mediaType === 'tv' && Array.isArray(row.seasons)) {
       for (const inputSeason of row.seasons.slice(0, 100)) {
-        const number = integer(object(inputSeason)?.season_number, 1, 1000);
+        const number = integer(object(inputSeason)?.season_number, 0, 1000);
         if (number !== undefined) seasons.set(number, { number, episodes: [] });
       }
     }
@@ -212,7 +211,7 @@ export class CineHdCatalog {
       maturity: 'UNRATED', runtime, seasons: [...seasons.values()].sort((a, b) => a.number - b.number),
       genres: [...new Set(genres)], moods: [], synopsis: textValue(row.overview, 5000) ?? '',
       cast: personNames(credits?.cast), creators: personNames(mediaType === 'tv' ? row.created_by : directors),
-      original: false, seed: id, tint: '#E50914', video: '', sources: [], quality: [],
+      original: false, seed: id, tint: '#F56D50', video: '', sources: [], quality: [],
       posterUrl: tmdbImage(row.poster_path, 'w500'), backdropUrl: tmdbImage(row.backdrop_path, 'w1280'),
       metadataProvider: 'tmdb', tmdbId, mediaType, originalLanguage: language, imdbId,
       rating: numberValue(row.vote_average, 0, 10), popularity: numberValue(row.popularity),
@@ -256,15 +255,18 @@ export class CineHdCatalog {
     });
   }
 
-  async refresh(signal?: AbortSignal): Promise<void> {
+  async refresh(signal?: AbortSignal, section?: CatalogSection): Promise<void> {
     this.client.clearCache();
-    const feeds: { path: string; type: 'movie' | 'tv'; params: Record<string, string | number | boolean> }[] = [
-      { path: '/trending/movie/week', type: 'movie', params: { page: 1, include_adult: false } },
-      { path: '/trending/tv/week', type: 'tv', params: { page: 1, include_adult: false } },
-      { path: '/discover/tv', type: 'tv', params: { page: 1, include_adult: false, with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' } },
-      { path: '/discover/tv', type: 'tv', params: { page: 1, include_adult: false, with_original_language: 'ko', sort_by: 'popularity.desc' } },
+    const feeds: { section: CatalogSection; path: string; type: 'movie' | 'tv'; params: Record<string, string | number | boolean> }[] = [
+      { section: 'home', path: '/trending/movie/week', type: 'movie', params: { page: 1, include_adult: false } },
+      { section: 'home', path: '/trending/tv/week', type: 'tv', params: { page: 1, include_adult: false } },
+      { section: 'anime', path: '/discover/tv', type: 'tv', params: { page: 1, include_adult: false, with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' } },
+      { section: 'kdrama', path: '/discover/tv', type: 'tv', params: { page: 1, include_adult: false, with_original_language: 'ko', sort_by: 'popularity.desc' } },
+      { section: 'others', path: '/discover/movie', type: 'movie', params: { page: 1, include_adult: false, with_genres: 16, sort_by: 'popularity.desc' } },
+      { section: 'others', path: '/discover/movie', type: 'movie', params: { page: 1, include_adult: false, with_genres: 99, sort_by: 'popularity.desc' } },
+      { section: 'others', path: '/discover/movie', type: 'movie', params: { page: 1, include_adult: false, with_original_language: 'bn', sort_by: 'popularity.desc' } },
     ];
-    const results = await Promise.allSettled(feeds.map(async feed => {
+    const results = await Promise.allSettled(feeds.filter(feed => !section || feed.section === section).map(async feed => {
       const response = await this.client.request(feed.path, feed.params, signal);
       if (signal?.aborted) throw new EngineError('cancelled');
       const titles = this.parseResults(response, feed.type);
@@ -308,7 +310,7 @@ export class CineHdCatalog {
       await this.persist();
     }
     const title = this.get(id);
-    const first = title?.seasons[0];
+    const first = title?.seasons.find(season => season.number > 0) ?? title?.seasons[0];
     if (title?.kind === 'series' && first) await this.season(id, first.number, signal);
     return this.get(id);
   }
@@ -316,7 +318,7 @@ export class CineHdCatalog {
   async season(id: string, number: number, signal?: AbortSignal): Promise<Season | undefined> {
     if (signal?.aborted) throw new EngineError('cancelled');
     const parsed = identity(id);
-    if (!parsed || parsed.type !== 'tv' || integer(number, 1, 1000) === undefined) return undefined;
+    if (!parsed || parsed.type !== 'tv' || integer(number, 0, 1000) === undefined) return undefined;
     const cached = this.entries.get(id);
     if (!cached) return undefined;
     if (cached.loadedSeasons.includes(number)) return cached.title.seasons.find(season => season.number === number);

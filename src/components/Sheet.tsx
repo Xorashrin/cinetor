@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useApp } from '../state/AppState';
 import { colors, motion } from '../theme/tokens';
 
 interface SheetProps {
@@ -14,11 +15,13 @@ interface SheetProps {
 /** Bottom sheet with drag handle, scrim and slide-up motion. */
 export function Sheet({ visible, onClose, children }: SheetProps) {
   const insets = useSafeAreaInsets();
+  const { state } = useApp();
+  const reduced = state.settings.reducedMotion;
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = visible ? withTiming(1, { duration: motion.slow, easing: motion.decelerate }) : 0;
-  }, [visible, progress]);
+    progress.value = visible ? reduced ? 1 : withTiming(1, { duration: motion.slow, easing: motion.decelerate }) : 0;
+  }, [visible, progress, reduced]);
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - progress.value) * 420 }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: progress.value }));

@@ -1,22 +1,50 @@
-# CineHD Provider Configuration
+# Cinetor Source Configuration
 
-Version 1.1.1 replaces the previous BDIX/JSON/directory/M3U discovery subsystem with CineHD provider adapters. There is no server configuration screen and no TMDB credential field, as requested.
+Version 2.0.0 uses separate metadata discovery, native engines, and repository-intake boundaries. Old CineHD/AWSIND code and evidence are historical compatibility material, not the active movie/episode resolver.
 
-## Active contracts
+## Metadata and live channels
 
-| Purpose | Endpoint | Behavior |
-| --- | --- | --- |
-| Metadata without a project key | `https://autoembed.app/aproxy/proxy.php?url=` | Proxies TMDB requests; preserves nested URL encoding. |
-| Metadata with a future project key | `https://api.themoviedb.org/3` | Set `EXPO_PUBLIC_TMDB_API_KEY` at build time; the app switches to direct TMDB. |
-| Posters and episode stills | `https://image.tmdb.org/t/p` | Restricted image paths and documented image sizes. |
-| Native media domain discovery | `https://allmovieland-proxy.60-60.workers.dev` | Reads `awsIndStreamDomain`, then resolves IMDb IDs through page/playlist requests. |
-| Browser provider registry | `https://raw.githubusercontent.com/michel8899/embed-proxy/main/providers.json` | Parses/caches registry metadata; browser embed URLs are not used by the native player. |
-| Live TV directory | `https://iptv-org.github.io/api` | Channels, streams, logos, countries, and categories joined into native stream candidates. |
+- Metadata without a project key uses the existing external proxy `https://autoembed.app/aproxy/proxy.php?url=` for TMDB requests.
+- An optional build-time `EXPO_PUBLIC_TMDB_API_KEY` selects direct `https://api.themoviedb.org/3` access. It is embedded public configuration, not a secret vault.
+- Artwork uses restricted `https://image.tmdb.org/t/p` paths.
+- The separate Live TV directory uses `https://iptv-org.github.io/api`. Listings are unverified candidates; media transport is checked when requested.
 
-The public metadata proxy works without a copied credential in the observed checks. Its service is external and can change. `EXPO_PUBLIC_` configuration is embedded in the APK; it is not a secret vault. No third-party API key recovered from CineHD is committed or reused.
+These external services can change or fail. No third-party credential is copied. Cached metadata is not playback evidence.
 
-Requests use Expo's streaming fetch, bounded body reads, explicit timeouts, cancellation, and public HTTPS URL validation. Ephemeral CSRF tokens stay in the request flow and are excluded from playback/download headers. URLs returned by trusted providers can still resolve through platform DNS; JavaScript validation does not establish DNS-level isolation.
+## Reviewed native plugins
 
-Metadata and live directory caches persist independently. Cached browsing does not require stream verification. Media references expire quickly and are resolved on demand. Stream probes inspect MP4 headers or HLS manifests and a bounded segment; actual decoder compatibility requires playback.
+Open **Profiles > Engines & Providers**. The native inventory lists reviewed build entries, artifact hashes, installation status, and errors. Explicitly enable either owned fixture to request Big Buck Bunny, TMDB movie 810.
 
-Offline HLS supports finite playlists, the selected video rendition, default alternate audio, initialization segments, and ordinary AES-128 keys. Live playlists, DRM, byte-range layouts, and unsupported manifest URI tags fail explicitly. Downloads preserve provider headers. HLS files remain in app storage, and deleting an HLS download removes its package directory. MP4 can additionally be exported to the Cinetor media album.
+- `cinetor-bbb-nuvio`: native QuickJS/Nuvio fixture.
+- `cinetor-bbb-cloudstream`: native compiled Cloudstream fixture with resources and a settings dialog.
+
+No other plugin ID can be installed. Nuvio settings are encrypted native plugin/profile preferences. Reviewed plugin code can read its own settings; do not enter unrelated credentials. Cloudstream's own settings dialog is plugin-global and is not profile-isolated.
+
+## BDIX endpoints
+
+1. Save only a server you are authorized to access.
+2. Select an available Android Wi-Fi path explicitly.
+3. Enter an HTTP/HTTPS or FTP/FTPS base URL without embedded credentials.
+4. Explicitly approve anonymous FTP/FTPS and any cleartext HTTP/plain FTP use.
+5. Add exact mappings, one per line:
+
+```text
+tmdb:movie:810 = BigBuckBunny.mp4
+tmdb:tv:123:s0e1 = specials/01.mp4
+```
+
+The server must actually provide that exact content. “Check listing” counts file entries; it never maps a title from a filename. Revoking an endpoint stops engine sessions and removes its saved consent/mappings. Nothing scans a subnet or guesses an ISP server.
+
+## Extension repository intake
+
+Open **Engines & Providers > Extension repository intake**. Save a named explicit public HTTPS JSON address and choose Nuvio or Cloudstream. Saving does not contact the server. Manual refresh requires confirmation because repository/index servers see the network request.
+
+Cloudstream supports a descriptor with `pluginLists` or a plugin index array. Nuvio accepts provider/plugin arrays with explicit artifact locations. Intake does not guess missing paths. A root can reference at most four indexes; nested descriptors are rejected. Requests use public DNS-filtered native transport, default HTTPS port, no supplied headers/auth/cookies, and bounded bodies/deadlines.
+
+All declared entries remain quarantined, invalid, or publisher-disabled. Publisher hashes and status flags are unverified claims. The metadata hash identifies the observed JSON bytes, not an artifact or decoded media. Updates never replace the reviewed executable allowlist. Repository URLs with credentials, queries, fragments, private addresses, or nonstandard ports are rejected rather than persisted.
+
+Original historical repository manifests and review receipts were not supplied. No default catalog of hundreds of working plugins is invented from historical counts.
+
+## Downloads
+
+Only MP4, finite non-DRM HLS (including AES-128 identity keys), and finite clear DASH may be downloaded. Native planning validates child playlists and exact 16-byte AES keys. DRM is rejected. MKV and WebM are online-only. Wi-Fi-only policy is the default. Paused/interrupted transfers restart at zero, and automatic retry is disabled. Offline files are native-owned capabilities; import/export cannot trust paths from another device. External storage/media export is not claimed as a verified feature of this redesign.

@@ -1,0 +1,84 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.cinetor'
+version = '1.0.0'
+
+android {
+  namespace 'com.cinetor.engines'
+  testBuildType 'release'
+  defaultConfig {
+    minSdkVersion 26
+    versionCode 1
+    versionName '1.0.0'
+    consumerProguardFiles 'consumer-rules.pro'
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+  }
+  sourceSets.main.assets.srcDirs += ['generated-assets']
+}
+
+repositories {
+  google()
+  mavenCentral()
+  maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+  implementation 'io.github.dokar3:quickjs-kt-android:1.0.15'
+  // Keep the complete published androidJvm dependency graph. Older Cloudstream ABIs
+  // have incompatible provider collection descriptors and are not supported.
+  api 'com.github.recloudstream.cloudstream:library-android:v4.8.0'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
+  implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.4.10'
+  implementation 'org.jetbrains.kotlin:kotlin-reflect:2.4.10'
+  implementation 'com.squareup.okhttp3:okhttp:5.3.2'
+  implementation 'com.github.Blatzar:NiceHttp:0.4.18'
+  implementation 'org.jsoup:jsoup:1.22.1'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.1'
+  androidTestImplementation 'androidx.test:runner:1.6.2'
+  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+  androidTestImplementation 'junit:junit:4.13.2'
+}
+
+// Verify the bytes Gradle actually selected, not a separately downloaded look-alike.
+// Dependency changes must update the reviewed lock, not turn verification off.
+def artifactPins = [
+  'io.github.dokar3:quickjs-kt-android:1.0.15': '406c3efb80d5fa3495df4a7f2663be8cc30c974fe5c2368effa929de77cf0ed8',
+  'com.github.recloudstream.cloudstream:library-android:v4.8.0': 'c15283dcf40055e4e747aeb6d8ae000dbf66d6a7566cca90e8d68f01020d3a49'
+]
+
+tasks.register('verifyCinetorEngineArtifacts') {
+  doLast {
+    def artifacts = configurations.releaseRuntimeClasspath.resolvedConfiguration.resolvedArtifacts
+    artifactPins.each { coordinate, expected ->
+      def matches = artifacts.findAll { it.moduleVersion.id.toString() == coordinate && it.extension == 'aar' }
+      if (matches.size() != 1) throw new GradleException("Expected one pinned engine AAR: ${coordinate}; resolved ${artifacts.collect { it.moduleVersion.id.toString() + ' / ' + it.file.name }}")
+      def artifact = matches.first()
+      def digest = java.security.MessageDigest.getInstance('SHA-256')
+      artifact.file.withInputStream { stream ->
+        byte[] buffer = new byte[65536]
+        int size
+        while ((size = stream.read(buffer)) > 0) digest.update(buffer, 0, size)
+      }
+      def actual = digest.digest().encodeHex().toString()
+      if (actual != expected) throw new GradleException("Engine integrity mismatch: ${coordinate}")
+    }
+  }
+}
+
+tasks.register('verifyCinetorFixtureAsset') {
+  doLast {
+    if (!providers.gradleProperty('cinetor.fixtureBootstrap').orNull?.toBoolean()) {
+      if (!file('generated-assets/cinetor/owned-fixture.json').isFile() ||
+          !file('generated-assets/cinetor/plugins/bbb.cs3').isFile()) {
+        throw new GradleException('Build and package the owned Cloudstream fixture in CI before building the app; see docs/NATIVE_ENGINE_PROVENANCE.md')
+      }
+    }
+  }
+}
+
+tasks.named('preBuild').configure {
+  dependsOn 'verifyCinetorEngineArtifacts', 'verifyCinetorFixtureAsset'
+}

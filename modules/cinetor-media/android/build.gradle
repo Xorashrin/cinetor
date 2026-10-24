@@ -1,0 +1,30 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.cinetormedia'
+version = '1.0.0'
+
+android {
+  namespace 'expo.modules.cinetormedia'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+    consumerProguardFiles 'consumer-rules.pro'
+  }
+}
+
+dependencies {
+  implementation 'com.facebook.react:react-android'
+  // Keep exactly aligned with Expo SDK 58 expo-video/expo-audio.
+  def media3Version = '1.9.1'
+  implementation "androidx.media3:media3-exoplayer:${media3Version}"
+  implementation "androidx.media3:media3-exoplayer-hls:${media3Version}"
+  implementation "androidx.media3:media3-exoplayer-dash:${media3Version}"
+  implementation "androidx.media3:media3-datasource:${media3Version}"
+  implementation "androidx.media3:media3-database:${media3Version}"
+  implementation "androidx.media3:media3-ui:${media3Version}"
+  implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+  testImplementation 'junit:junit:4.13.2'
+}

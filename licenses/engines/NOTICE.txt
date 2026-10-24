@@ -1,0 +1,78 @@
+Cinetor Native Engine Notices
+Modified integration date: October 24, 2026
+
+The combined module is distributed under GNU GPL version 3. The original Cinetor
+fixture plugins permit GPL version 3 or later. The application must satisfy all
+applicable GPL terms; the preexisting MIT notice remains applicable to its original files and
+must not be removed or represented as the sole license for the combined work.
+
+NUVIO MOBILE
+Copyright: Nuvio contributors, as identified in the corresponding source.
+Repository: https://github.com/NuvioMedia/NuvioMobile
+Revision: c114d6fb69fbed2bbed1f728bce7d752b5a19158
+License: GPL-3.0; verbatim upstream text in NuvioMobile-COPYING.txt.
+Cinetor adapts the modular fullCommonMain plugin runtime, primarily JsBindings.kt.
+Changes: no generated Compose UI/TMDB dependencies, official QuickJS runtime,
+30-second native interrupt, bounded heap/stack/host output, error propagation,
+abortable HTTP, allowlisted origins, correct URL/DOM operations, explicit rejected
+WASM/asymmetric/native APIs, encrypted profile settings, no bytecode cache.
+NuvioTV is a reference only and is not copied or bundled.
+
+CLOUDSTREAM
+Copyright: Cloudstream contributors, as identified in the corresponding source.
+Repository: https://github.com/recloudstream/cloudstream
+Revision: 3796406e636356f556c16e04e1da4e37d6a19038 (v4.8.0)
+Artifact: com.github.recloudstream.cloudstream:library-android:v4.8.0
+License: GPL-3.0; see COPYING-GPL-3.0.txt.
+Cinetor retains the published library and Android Plugin load/resources/settings
+ABI, adapts persistent DataStore methods, and adds an independently reviewed
+SHA-256-pinned DEX/resource loader. Video actions, WebView/native-library plugins,
+and unsupported API versions are rejected, not represented as functioning.
+The extension loader is same-UID code execution, not a security sandbox.
+
+NICEHTTP
+Repository: https://github.com/Blatzar/NiceHttp
+Revision: f1dee9dfc5b86a24c65bf8c6e8403d336341dd3e (0.4.18)
+License: GPL-3.0; see COPYING-GPL-3.0.txt. Used through Cloudstream's published
+complete dependency graph with the existing response parser retained.
+
+NEWPIPE EXTRACTOR
+Repository: https://github.com/TeamNewPipe/NewPipeExtractor
+Revision: caae86c943857cc6e1a762e3488d6a14e9cf7800 (v0.26.3)
+License: GPL-3.0; see COPYING-GPL-3.0.txt. A transitive dependency of Cloudstream;
+no NewPipe service or live source is enabled by the Cinetor fixture registry.
+
+QUICKJS-KT
+Repository: https://github.com/dokar3/quickjs-kt
+Revision: a081755bcdb18ee6afa7ffee25b8fa976f06d31f (1.0.15)
+License: Apache-2.0. Verbatim upstream copyright/license, including its appendix,
+is retained in QuickJS-KT-Apache-2.0.txt. The published AAR is unmodified.
+Bellard QuickJS: revision 04be246001599f5995fa2f2d8c91a0f198d3f34c, MIT,
+Copyright (c) 2017-2021 Fabrice Bellard and Charlie Gordon; see QuickJS-MIT.txt.
+c-vector: revision 774773d4cb1e66dd736e90e7f482d4f22af464c6, MIT,
+Copyright (c) 2015 Evan Teran; see c-vector-MIT.txt.
+
+OPEN MOVIE FIXTURE MEDIA
+Big Buck Bunny (2008), (c) Blender Foundation, https://www.bigbuckbunny.org
+Licensed under Creative Commons Attribution 3.0:
+https://creativecommons.org/licenses/by/3.0/
+Project and attribution: https://peach.blender.org/about/
+Full movie mirror: https://media.w3.org/2010/05/bunny/movie.mp4
+The movie is not embedded in the application; the original fixture resolves its
+HTTPS URL only for TMDB movie 810. No media modification is claimed. An HTTP HEAD
+observation is not decoder/playback evidence. This is not a general movie catalog.
+
+CORRESPONDING SOURCE AND BUILD INFORMATION
+config/engine-lock.json pins source revisions, binary hashes, original fixture
+source hashes, and the dependency profile. tools/fetch_engine_sources.py
+--source-bundle --output <new-directory> downloads source archives and emits
+SOURCE_RECEIPTS.json without executing or extracting downloaded code. Supply that
+bundle, the exact Cinetor app source revision, original fixture source and build
+scripts together with every distributed APK. GPL obligations are not satisfied
+by an unfulfilled promise to fetch sources later. Exact integration and CI-only
+build commands are in docs/NATIVE_ENGINE_PROVENANCE.md.
+
+All software is supplied WITHOUT ANY WARRANTY, including implied warranties of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE, to the extent permitted by
+law. See the corresponding full license texts. Engine names identify provenance
+and interoperability; no upstream endorsement is implied.

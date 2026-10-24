@@ -1,5 +1,7 @@
 # Cinetor v1.1.1 CineHD Implementation Report
 
+> Historical report for the recorded v1.1.1 commit and APK. It does not describe or verify the current 2.0.0 three-engine implementation. See [current status](PROGRESS.md).
+
 Date: October 23, 2026. Project: `/home/ASHRIN/Developer/netflix-clone`. Repository: [Xorashrin/cinetor](https://github.com/Xorashrin/cinetor). Release APK: [cinetor-v1.1.1-release.apk](https://github.com/Xorashrin/cinetor/releases/download/v1.1.1/cinetor-v1.1.1-release.apk).
 
 ## Recovered requirements and artifact findings

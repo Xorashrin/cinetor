@@ -8,6 +8,7 @@ import {
   initializeEngine,
   scheduler,
   closeAdultSession,
+  invalidateNetwork,
 } from "./runtime";
 import { registerBackground } from "./background";
 export function useEngine(
@@ -45,10 +46,14 @@ export function useEngine(
     lifecycle.start();
     if (AppState.currentState !== "active") lifecycle.change(false);
     const app = AppState.addEventListener("change", (state) => {
-      if (state !== "active") closeAdultSession();
+      if (state !== "active") { closeAdultSession(); invalidateNetwork(); }
       lifecycle.change(state === "active");
     });
+    let networkKey: string | undefined;
     const net = ExpoNetwork.addNetworkStateListener((state) => {
+      const key = `${state.type}:${state.isConnected}:${state.isInternetReachable}`;
+      if (networkKey !== undefined && networkKey !== key) invalidateNetwork();
+      networkKey = key;
       if (state.isConnected === false) scheduler.cancel();
       else if (AppState.currentState === "active") lifecycle.change(true);
     });

@@ -1,21 +1,20 @@
 {
   "expo": {
-    "name": "Cinator",
-    "slug": "cinator",
-    "version": "1.1.1",
+    "name": "Cinetor",
+    "slug": "cinetor",
+    "version": "2.0.0",
     "orientation": "default",
-    "icon": "./assets/icon.png",
-    "scheme": "cinator",
+    "icon": "./assets/cinetor-icon.png",
+    "scheme": ["cinetor", "cinator"],
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#000000",
+    "backgroundColor": "#0B1017",
     "android": {
       "package": "com.cinator.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
-        "backgroundColor": "#000000",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0B1017",
+        "foregroundImage": "./assets/cinetor-foreground.png",
+        "monochromeImage": "./assets/cinetor-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
@@ -26,8 +25,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#000000",
-          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#0B1017",
+          "image": "./assets/cinetor-splash.png",
           "imageWidth": 140
         }
       ],
@@ -41,8 +40,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Cinator saves downloaded videos to your device storage.",
-          "savePhotosPermission": "Cinator saves downloaded videos to your device storage.",
+          "photosPermission": "Cinetor saves approved downloaded videos to your device storage.",
+          "savePhotosPermission": "Cinetor saves approved downloaded videos to your device storage.",
           "isAccessMediaLocationEnabled": false,
           "granularPermissions": [
             "video"
@@ -53,14 +52,21 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true,
+            "usesCleartextTraffic": false,
+            "minSdkVersion": 26,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0",
+            "kotlinVersion": "2.4.10",
+            "extraMavenRepos": ["https://jitpack.io"],
             "enableMinifyInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false
           }
         }
       ],
       "expo-background-task",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withCinetorAndroid"
     ]
   }
 }

@@ -1,4 +1,5 @@
 import type { Title } from '../data/mock';
+import { sectionFor } from '../engine/contracts';
 
 export type SearchSort = 'relevance' | 'newest' | 'rating' | 'title';
 
@@ -17,7 +18,7 @@ export function searchTitles(titles: Title[], query: string, sort: SearchSort = 
   if (!phrase) return [];
   const terms = [...new Set(phrase.split(' '))];
   return titles
-    .filter(title => title.maturity !== '18+' && !title.genres.some(genre => normalize(genre) === 'adult (18+)'))
+    .filter(title => sectionFor(title) !== undefined)
     .map(title => {
       const name = normalize(title.name);
       const metadata = [name, ...title.genres, ...title.cast, ...title.creators, ...title.moods].map(normalize);

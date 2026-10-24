@@ -53,7 +53,7 @@ function fixture(playlist: unknown, leaves: Record<string, string>, calls: Call[
     if (url.endsWith('.mp4')) {
       assert.equal(headers.has('x-csrf-token'), false);
       assert.equal(headers.get('range'), 'bytes=0-4095');
-      return new Response(mp4(), { headers: { 'Content-Type': 'video/mp4' }, status: 206 });
+      return new Response(mp4(), { headers: { 'Content-Type': 'video/mp4', 'Content-Range': 'bytes 0-31/32', 'Content-Length': '32' }, status: 206 });
     }
     throw new Error('Unexpected fixture request: ' + url);
   };
@@ -130,6 +130,23 @@ test('HLS master and media playlists require a valid TS segment and preserve dir
   assert.equal(ref.downloadable, true);
   assert.equal(ref.headers?.['User-Agent'], 'DirectoryPlayer/1');
   assert.deepEqual(requested, ['https://cdn.example/master.m3u8', 'https://cdn.example/video/media.m3u8', 'https://cdn.example/video/segment.ts']);
+});
+
+test('optional probe headers are omitted rather than sent as undefined', async () => {
+  let requested = false;
+  const resolver = new NativeStreamResolver(new ProviderHttp(async (_input, init) => {
+    requested = true;
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.has('origin'), false);
+    assert.equal(headers.has('referer'), false);
+    assert.ok(headers.get('user-agent'));
+    return new Response(mp4(), { headers: { 'Content-Type': 'video/mp4' } });
+  }));
+  const ref = await resolver.probe('https://cdn.example/movie.mp4', {}, 'Fixture');
+  assert.equal(requested, true);
+  assert.equal(ref.container, 'mp4');
+  assert.equal(Object.hasOwn(ref.headers ?? {}, 'origin'), false);
+  assert.equal(Object.hasOwn(ref.headers ?? {}, 'referer'), false);
 });
 
 test('HTML media, private endpoints, ads, encrypted HLS and invalid transport segments never verify', async () => {

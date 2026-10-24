@@ -1,0 +1,5 @@
+.gradle/
+**/build/
+android/generated-assets/
+fixtures/cloudstream/sdk/
+*.iml

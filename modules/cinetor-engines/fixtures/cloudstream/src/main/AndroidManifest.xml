@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Cinetor Blender Fixture" android:allowBackup="false" />
+</manifest>

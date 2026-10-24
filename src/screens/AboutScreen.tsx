@@ -1,156 +1,101 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Linking, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MLogo, Wordmark } from '../components/Logo';
-import { ScreenHeader } from '../components/ScreenHeader';
+import { Button, IconButton } from '../components/Buttons';
+import { CinetorMark, Wordmark } from '../components/Logo';
 import { Txt } from '../components/Txt';
+import { useRootNav } from '../navigation/types';
 import { colors, layout, radius } from '../theme/tokens';
 
 const GITHUB_REPO_URL = 'https://github.com/Xorashrin/cinetor';
+const MIT_NOTICE = `The MIT License (MIT)
+
+Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`;
 
 export default function AboutScreen() {
+  const nav = useRootNav();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const [linkError, setLinkError] = useState(false);
+  const [showLicense, setShowLicense] = useState(false);
+  const gutter = Math.max(layout.gutter, (width - layout.maxContentWidth) / 2);
+
   const openGitHub = () => {
-    Linking.openURL(GITHUB_REPO_URL).catch(() => {});
+    setLinkError(false);
+    void Linking.openURL(GITHUB_REPO_URL).catch(() => setLinkError(true));
   };
 
   return (
-    <View style={styles.root}>
-      <ScreenHeader title="About Cinator" back />
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* App Branding Card */}
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <View style={[styles.header, { paddingLeft: gutter + insets.left - 8, paddingRight: gutter + insets.right }]}>
+        <IconButton icon="arrow-back" onPress={() => nav.goBack()} accessibilityLabel="Go back" />
+        <Txt weight="bold" size={22} accessibilityRole="header" style={styles.flex}>About Cinetor</Txt>
+      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingLeft: gutter + insets.left, paddingRight: gutter + insets.right, paddingTop: 16, paddingBottom: insets.bottom + 32 }}>
         <View style={styles.brandCard}>
-          <MLogo size={56} />
-          <View style={{ marginTop: 14 }}>
-            <Wordmark size={32} />
-          </View>
-          <View style={styles.versionPill}>
-            <Txt weight="bold" size={12} color={colors.red}>
-              v1.1.1
-            </Txt>
-            <View style={styles.pillDot} />
-            <Txt size={12} color={colors.textDim}>
-              Build 6
-            </Txt>
-          </View>
-
-          <Txt size={14} color={colors.textMuted} align="center" lineHeight={22} style={{ marginTop: 14 }}>
-            Next-generation fast streaming entertainment client featuring isolated feeds for Movies, TV Series,
-            Anime, K-Drama, and Live TV channels.
-          </Txt>
+          <CinetorMark size={64} />
+          <View style={styles.wordmark}><Wordmark size={34} /></View>
+          <Txt weight="semibold" size={13} color={colors.accent} style={styles.version}>Version 2.0.0</Txt>
+          <Txt size={15} color={colors.textMuted} align="center" style={styles.description}>An independent, local-first catalog and media client.</Txt>
         </View>
 
-        {/* Development Team */}
-        <View style={styles.sectionCard}>
-          <Txt weight="bold" size={13} color={colors.textMuted} style={styles.cardHeader}>
-            DEVELOPMENT & CONTRIBUTORS
-          </Txt>
-
-          <View style={styles.personRow}>
-            <View style={[styles.personIconWrap, { backgroundColor: 'rgba(229, 9, 20, 0.15)' }]}>
-              <Ionicons name="code-slash" size={20} color={colors.red} />
-            </View>
-            <View style={{ flex: 1, marginLeft: 14 }}>
-              <Txt size={11} color={colors.textDim} weight="bold">
-                LEAD DEVELOPER
-              </Txt>
-              <Txt weight="bold" size={16} color={colors.text} style={{ marginTop: 2 }}>
-                Asraful Islam
-              </Txt>
-            </View>
-          </View>
-
-          <View style={styles.innerDivider} />
-
-          <View style={styles.personRow}>
-            <View style={[styles.personIconWrap, { backgroundColor: 'rgba(0, 113, 235, 0.15)' }]}>
-              <Ionicons name="sparkles" size={20} color={colors.blue} />
-            </View>
-            <View style={{ flex: 1, marginLeft: 14 }}>
-              <Txt size={11} color={colors.textDim} weight="bold">
-                CONTRIBUTOR & QA
-              </Txt>
-              <Txt weight="bold" size={16} color={colors.text} style={{ marginTop: 2 }}>
-                Sazzad Hossain
-              </Txt>
-            </View>
-          </View>
+        <View style={styles.card}>
+          <Txt weight="semibold" size={12} color={colors.accent} spacing={1.2} style={styles.eyebrow}>THE PEOPLE</Txt>
+          <Txt weight="semibold" size={17} selectable>Developed By: Asraful Islam</Txt>
+          <View style={styles.divider} />
+          <Txt weight="semibold" size={17} selectable>Contributed By: Sazzad Hossain</Txt>
         </View>
 
-        {/* Architecture & Core Features */}
-        <View style={styles.sectionCard}>
-          <Txt weight="bold" size={13} color={colors.textMuted} style={styles.cardHeader}>
-            APP ARCHITECTURE
-          </Txt>
-
-          <View style={styles.featureItem}>
-            <Ionicons name="layers-outline" size={20} color={colors.red} />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Txt weight="semibold" size={14} color={colors.text}>
-                Strict Feed Isolation
-              </Txt>
-              <Txt size={12} color={colors.textMuted} style={{ marginTop: 2 }}>
-                Dedicated sections for Home, Anime, K-Drama, and Live TV with zero feed contamination.
-              </Txt>
-            </View>
-          </View>
-
-          <View style={styles.innerDivider} />
-
-          <View style={styles.featureItem}>
-            <Ionicons name="flash-outline" size={20} color="#F59E0B" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Txt weight="semibold" size={14} color={colors.text}>
-                High-Performance Native Video
-              </Txt>
-              <Txt size={12} color={colors.textMuted} style={{ marginTop: 2 }}>
-                Hardware-accelerated playback with gesture controls, multi-quality streams, and resume support.
-              </Txt>
-            </View>
-          </View>
-
-          <View style={styles.innerDivider} />
-
-          <View style={styles.featureItem}>
-            <Ionicons name="hardware-chip-outline" size={20} color="#10B981" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Txt weight="semibold" size={14} color={colors.text}>
-                Universal Multi-Architecture
-              </Txt>
-              <Txt size={12} color={colors.textMuted} style={{ marginTop: 2 }}>
-                Native binary optimizations for arm64-v8a, armeabi-v7a, and x86_64 Android devices.
-              </Txt>
-            </View>
-          </View>
+        <View style={styles.card}>
+          <View style={styles.sectionHeading}><Ionicons name="compass-outline" size={22} color={colors.accent} accessible={false} /><Txt weight="bold" size={18} style={styles.flex}>Made to stay organized</Txt></View>
+          <Txt color={colors.textMuted} style={styles.paragraph}>Home, Anime, K-Drama, and Others keep their own catalog filters and searches. Profiles is the home for your local profiles, saved titles, Continue Watching, downloads, and settings.</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>Catalog entries describe titles. They do not guarantee playback, download availability, stream quality, or permission to access content. Missing metadata remains unknown.</Txt>
         </View>
 
-        {/* Open Source / GitHub Action */}
-        <View style={styles.sectionCard}>
-          <Txt weight="bold" size={13} color={colors.textMuted} style={styles.cardHeader}>
-            OPEN SOURCE & REPOSITORY
-          </Txt>
-          <Txt size={13} color={colors.textMuted} lineHeight={19}>
-            Cinator is actively maintained. Report issues, contribute features, or check updates directly on GitHub.
-          </Txt>
-
-          <Pressable onPress={openGitHub} style={({ pressed }) => [styles.githubBtn, pressed && { opacity: 0.85 }]}>
-            <Ionicons name="logo-github" size={20} color={colors.text} />
-            <Txt weight="bold" size={14} color={colors.text} style={{ marginLeft: 10 }}>
-              github.com/Xorashrin/cinetor
-            </Txt>
-            <Ionicons name="open-outline" size={16} color={colors.textDim} style={{ marginLeft: 8 }} />
-          </Pressable>
+        <View style={styles.card}>
+          <View style={styles.sectionHeading}><Ionicons name="shield-outline" size={22} color={colors.warning} accessible={false} /><Txt weight="bold" size={18} style={styles.flex}>Build identity & signing</Txt></View>
+          <Txt size={13} color={colors.textDim} style={styles.paragraph}>Android package</Txt>
+          <Txt size={14} selectable>com.cinator.app</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>The legacy Android package is preserved for update compatibility. The display name is Cinetor.</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>Compatibility signing uses a debug certificate, not a private distribution key. A compatibility-signed build is not evidence of private production signing.</Txt>
         </View>
 
-        {/* Footer Note */}
-        <View style={styles.footerWrap}>
-          <Txt size={12} color={colors.textDim} align="center">
-            Designed for mobile entertainment enthusiasts.
-          </Txt>
-          <Txt size={11} color="rgba(255,255,255,0.25)" align="center" style={{ marginTop: 4 }}>
-            Cinator © {new Date().getFullYear()} • All rights reserved.
-          </Txt>
+        <View style={styles.card}>
+          <Txt weight="bold" size={18} accessibilityRole="header">Source & contributions</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>Read the source, report an issue, or review the repository's license and notices on GitHub.</Txt>
+          <Button label="Open project on GitHub" icon="open-outline" variant="secondary" onPress={openGitHub} accessibilityHint="Opens github.com/Xorashrin/cinetor in your browser" style={styles.action} />
+          <Txt size={12} color={colors.textDim} selectable style={styles.paragraph}>{GITHUB_REPO_URL}</Txt>
+          {linkError ? <Txt size={13} color={colors.warning} accessibilityLiveRegion="polite" style={styles.paragraph}>The browser could not open this link. You can copy the repository address above.</Txt> : null}
+        </View>
+
+        <View style={styles.card}>
+          <Txt weight="bold" size={18} accessibilityRole="header">Notices</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>Cinetor is an independent project. Content, descriptions, and artwork belong to their respective rightsholders. Use only sources and content you are authorized to access.</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>This product uses the TMDB API but is not endorsed or certified by TMDB. Metadata and artwork are not video sources.</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>Native Nuvio/Cloudstream components are GPL-3.0; combined distribution includes corresponding source and third-party notices.</Txt>
+          <Txt color={colors.textMuted} style={styles.paragraph}>The original Expo MIT notice is retained below. It is not the license for the combined distribution. Dependencies and engine components retain their individual license, attribution, and source-distribution requirements; no blanket license for third-party content is implied.</Txt>
+          <Button label={showLicense ? 'Hide original MIT notice' : 'Read original MIT notice'} icon={showLicense ? 'chevron-up' : 'chevron-down'} variant="outline" onPress={() => setShowLicense(value => !value)} style={styles.action} />
+          {showLicense ? <Txt size={12} color={colors.textMuted} selectable style={styles.license}>{MIT_NOTICE}</Txt> : null}
         </View>
       </ScrollView>
     </View>
@@ -158,91 +103,18 @@ export default function AboutScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  scrollContent: {
-    paddingHorizontal: layout.gutter + 4,
-    paddingTop: 8,
-    paddingBottom: 48,
-  },
-  brandCard: {
-    backgroundColor: colors.surface1,
-    borderRadius: radius.xl,
-    paddingVertical: 28,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 16,
-  },
-  versionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface2,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginTop: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  pillDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.textDim,
-    marginHorizontal: 8,
-  },
-  sectionCard: {
-    backgroundColor: colors.surface1,
-    borderRadius: radius.lg,
-    padding: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 16,
-  },
-  cardHeader: {
-    marginBottom: 14,
-    letterSpacing: 0.5,
-  },
-  personRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  personIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  innerDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    marginVertical: 12,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 2,
-  },
-  githubBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface3,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: radius.md,
-    marginTop: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  footerWrap: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
+  root: { flex: 1, backgroundColor: colors.bg },
+  flex: { flex: 1, minWidth: 0 },
+  header: { minHeight: layout.headerHeight, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
+  brandCard: { backgroundColor: colors.surface1, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center', paddingHorizontal: 24, paddingVertical: 32, marginBottom: 16 },
+  wordmark: { marginTop: 16 },
+  version: { marginTop: 8 },
+  description: { marginTop: 16, maxWidth: 440 },
+  card: { padding: 20, marginBottom: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface0 },
+  eyebrow: { marginBottom: 16 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  paragraph: { marginTop: 12 },
+  divider: { height: 1, backgroundColor: colors.borderSubtle, marginVertical: 16 },
+  action: { marginTop: 16, alignSelf: 'flex-start' },
+  license: { marginTop: 18 },
 });
