@@ -139,6 +139,37 @@ test('pause is honest and restart can use a newly resolved source', async () => 
   assert.deepEqual(restarted, { key: 'profile:movie', url: 'https://replacement.example.test/video.mpd', headers: {}, container: 'dash', headerOrigin: 'https://replacement.example.test' });
 });
 
+test('active restart settles the old waiter and preserves the replacement and its ownership', { timeout: 1000 }, async () => {
+  const f = fixture();
+  const client = createDownloadClient(() => f.native);
+  const controller = new AbortController();
+  const waiting = client.downloadVideo('profile:movie', 'https://example.test/movie.mp4', () => undefined, {}, controller.signal);
+  const rejected = assert.rejects(waiting, { name: 'AbortError' });
+  await tick();
+  const replacementId = '12345678-9abc-4def-8abc-123456789abc';
+  const replacement = entry({ id: replacementId, updatedAt: 3 });
+  f.native.restart = async () => {
+    // Native must emit the old UUID's terminal event before publishing its replacement.
+    f.emit(entry({ status: 'failed', removed: true, errorCode: 'canceled', updatedAt: 3 }));
+    f.emit(replacement);
+    return replacement;
+  };
+  assert.equal((await client.restartDownload('profile:movie')).id, replacementId);
+  controller.abort();
+  await rejected;
+  assert.equal(f.listeners.size, 0, 'the original waiter must release its native subscription');
+  assert.equal(client.isActive('profile:movie'), false, 'the original active-key waiter must be released');
+  assert.deepEqual(f.cancellations, [], 'a stale abort must not cancel the replacement');
+  await f.native.cancelAttempt('profile:movie', id);
+  assert.deepEqual(f.cancellations, [], 'native attempt ownership must reject an obsolete ID');
+  assert.equal((await client.queryDownload('profile:movie'))?.id, replacementId);
+  const replacementWaiting = client.downloadVideo('profile:movie', 'https://example.test/movie.mp4', () => undefined);
+  await tick();
+  f.emit(entry({ id: replacementId, status: 'downloaded', localUri: `cinetor-offline://download/${replacementId}`, sizeMB: 2, updatedAt: 4 }));
+  assert.equal((await replacementWaiting).sizeMB, 2);
+  assert.equal(f.listeners.size, 0);
+});
+
 test('native snapshots restore active state and native storage/delete policies stay authoritative', async () => {
   const f = fixture();
   f.set(entry({ status: 'downloading', bytesDownloaded: 11 }));
@@ -167,6 +198,12 @@ test('native security/lifecycle invariants are wired, not a JS HLS or simulated 
   const view = await readFile(new URL('android/src/main/java/expo/modules/cinetormedia/OfflineVideoView.kt', root), 'utf8');
   const service = await readFile(new URL('android/src/main/java/expo/modules/cinetormedia/CinetorDownloadService.kt', root), 'utf8');
   const module = await readFile(new URL('android/src/main/java/expo/modules/cinetormedia/CinetorMediaModule.kt', root), 'utf8');
+  const wrapper = await readFile(new URL('../../src/components/OfflineVideo.tsx', root), 'utf8');
+  assert.match(wrapper, /requireNativeModule\('CinetorMedia'\);\s*NativeVideo = requireNativeViewManager/);
+  assert.match(engine, /engine\.sessions\.remove\(id, source\)/);
+  assert.match(engine, /emit\(previous, true\)[\s\S]*store\.records\[key\] = record/);
+  assert.match(http, /MediaSafety\.validateRepresentation\(session\.download, ranged/);
+  assert.match(http, /ManifestValidation\.hlsEncryptionKeyUris\(playlist\)/);
   assert.match(engine, /manager\.maxParallelDownloads = 2/);
   assert.match(engine, /manager\.minRetryCount = 0/);
   assert.match(engine, /setUpstreamDataSourceFactory\(null\)/);

@@ -87,6 +87,24 @@ internal object MediaSafety {
   fun allowsManifestRefresh(download: Boolean, ranged: Boolean, recognizedManifest: Boolean): Boolean =
     !download && !ranged && recognizedManifest
 
+  fun validateRepresentation(
+    download: Boolean,
+    ranged: Boolean,
+    existing: ResourceIdentity?,
+    received: ResourceIdentity,
+    refreshableManifest: Boolean = false,
+  ) {
+    if (download && ranged && received.etag == null) {
+      throw MediaFailure("unverifiable_range", "This source has no strong validator for safe offline byte ranges")
+    }
+    if (!refreshableManifest && existing != null && (existing.destination != received.destination ||
+        existing.etag != null && existing.etag != received.etag ||
+        existing.total >= 0 && received.total >= 0 && existing.total != received.total ||
+        download && ranged && existing.etag == null)) {
+      throw MediaFailure("representation_changed", "The media representation changed. Restart from zero.")
+    }
+  }
+
   fun headers(input: Map<String, String>): Map<String, String> {
     if (input.size > 32) throw MediaFailure("unsafe_headers", "Too many source headers")
     return input.entries.associate { (name, value) ->
@@ -309,7 +327,8 @@ internal class SafeHttpDataSource(private val session: SourceSession) : BaseData
       var total = length
       if (result.code == 416) {
         val total416 = Regex("bytes \\*/([0-9]+)").matchEntire(result.header("Content-Range") ?: "")?.groupValues?.get(1)?.toLongOrNull()
-        if (existing?.etag != null && existing.etag == etag && total416 == existing.total && dataSpec.position == total416) {
+        if (ranged && total416 != null && existing != null && total416 == existing.total && dataSpec.position == total416) {
+          MediaSafety.validateRepresentation(session.download, true, existing, ResourceIdentity(etag, total416, current.toString()))
           remaining = 0; expected = 0; input = ByteArrayInputStream(ByteArray(0))
           opened = true; transferStarted(dataSpec)
           return 0
@@ -328,7 +347,6 @@ internal class SafeHttpDataSource(private val session: SourceSession) : BaseData
           dataSpec.length != C.LENGTH_UNSET.toLong() && end != minOf(start + dataSpec.length - 1, total - 1)) {
           throw MediaFailure("invalid_range", "The server returned the wrong media range")
         }
-        if (etag == null) throw MediaFailure("unverifiable_range", "This source has no strong validator for safe byte ranges")
         remaining = end - start + 1
       } else {
         if (result.code != 200) throw MediaFailure("http_error", "The media server returned HTTP ${result.code}")
@@ -339,14 +357,10 @@ internal class SafeHttpDataSource(private val session: SourceSession) : BaseData
         original.encodedPath.endsWith(".m3u8", true) || original.encodedPath.endsWith(".mpd", true) ||
           contentType.contains("mpegurl") || contentType.contains("dash+xml") ||
           original == session.root && session.container in setOf("hls", "dash"))
-      if (!refreshableManifest && existing != null && (existing.destination != current.toString() ||
-          existing.etag != null && existing.etag != etag ||
-          existing.total >= 0 && total >= 0 && existing.total != total ||
-          ranged && existing.etag == null)) {
-        throw MediaFailure("representation_changed", "The media representation changed. Restart from zero.")
-      }
+      val receivedIdentity = ResourceIdentity(etag, total, current.toString())
+      MediaSafety.validateRepresentation(session.download, ranged, existing, receivedIdentity, refreshableManifest)
       if (session.identities.size >= 100_000 && !session.identities.containsKey(original.toString())) throw MediaFailure("manifest_limit", "This presentation contains too many resources")
-      session.identities[original.toString()] = ResourceIdentity(etag, total, current.toString())
+      session.identities[original.toString()] = receivedIdentity
       if (contentType.contains("text/html") || contentType.contains("application/json")) throw MediaFailure("not_media", "The server returned a page instead of media")
       input = result.body?.byteStream() ?: throw MediaFailure("empty_media", "The server returned no media")
       expected = remaining
@@ -383,13 +397,11 @@ internal class SafeHttpDataSource(private val session: SourceSession) : BaseData
         session.freezeManifest(original.toString(), bytes)
         val playlist = bytes.toString(Charsets.UTF_8)
         if (playlist.removePrefix("﻿").trimStart().startsWith("#EXTM3U")) {
-          playlist.lineSequence().filter { it.startsWith("#EXT-X-KEY:") || it.startsWith("#EXT-X-SESSION-KEY:") }.forEach { line ->
-            Regex("(?:^|,)URI=\"([^\"]+)\"").find(line)?.groupValues?.get(1)?.let { key ->
-              val resolved = current.resolve(key) ?: throw MediaFailure("invalid_key", "Invalid offline encryption key address")
-              MediaSafety.checkedUrl(resolved.toString())
-              if (session.encryptionKeys.size >= 100_000) throw MediaFailure("manifest_limit", "Too many offline encryption keys")
-              session.encryptionKeys.add(resolved.toString())
-            }
+          ManifestValidation.hlsEncryptionKeyUris(playlist).forEach { key ->
+            val resolved = current.resolve(key) ?: throw MediaFailure("invalid_key", "Invalid offline encryption key address")
+            MediaSafety.checkedUrl(resolved.toString())
+            if (session.encryptionKeys.size >= 100_000) throw MediaFailure("manifest_limit", "Too many offline encryption keys")
+            session.encryptionKeys.add(resolved.toString())
           }
         }
         if (current != original) {
@@ -402,7 +414,7 @@ internal class SafeHttpDataSource(private val session: SourceSession) : BaseData
         remaining = bytes.size.toLong(); expected = remaining
       }
       if (session.download && original.toString() in session.encryptionKeys) {
-        if (expected >= 0 && expected != 16L) throw MediaFailure("invalid_key", "An offline AES-128 key is not 16 bytes")
+        if (expected >= 0) ManifestValidation.validateAes128KeyLength(expected)
         val key = ByteArray(17)
         var size = 0
         while (size < key.size) {
@@ -411,7 +423,7 @@ internal class SafeHttpDataSource(private val session: SourceSession) : BaseData
           if (count < 0) break
           size += count
         }
-        if (size != 16) throw MediaFailure("invalid_key", "An offline AES-128 key is not 16 bytes")
+        ManifestValidation.validateAes128KeyLength(size.toLong())
         input?.close(); response?.close(); response = null
         call?.let { session.remove(it) }; call = null
         input = ByteArrayInputStream(key.copyOf(16)); remaining = 16; expected = 16

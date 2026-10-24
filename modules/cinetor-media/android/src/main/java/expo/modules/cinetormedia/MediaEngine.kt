@@ -254,7 +254,7 @@ internal class MediaEngine private constructor(val context: Context) {
         checked.encodedPath.endsWith(".mp4", true) -> "mp4"
         else -> throw MediaFailure("unsupported_format", "This source is not supported for offline downloads")
       }
-    if (container !in setOf("mp4", "hls", "dash")) throw MediaFailure("unsupported_format", "Only MP4 and finite clear HLS/DASH can be saved offline")
+    if (container !in setOf("mp4", "hls", "dash")) throw MediaFailure("unsupported_format", "Only MP4, finite non-DRM HLS, and clear DASH can be saved offline")
     if (wifiOnly && !MediaSafety.wifiConnected(context)) throw MediaFailure("wifi_required", "Connect to Wi-Fi before downloading")
     MediaSafety.checkSpace(context)
     if (previous?.status == "downloaded") throw MediaFailure("already_saved", "Delete the saved copy before replacing it")
@@ -263,6 +263,11 @@ internal class MediaEngine private constructor(val context: Context) {
     if (previous != null) {
       sessions[previous.id]?.cancel()
       manager.removeDownload(previous.id)
+      previous.status = "failed"; previous.errorCode = "canceled"
+      previous.error = "Download replaced by a fresh attempt"; previous.updatedAt = record.updatedAt
+      // Settle the old JS waiter before publishing the replacement UUID. Its late abort is
+      // still limited to cancelAttempt(key, oldId), so it cannot remove the new owner.
+      emit(previous, true)
     }
     store.records[key] = record
     store.save()
@@ -478,7 +483,12 @@ internal class MediaEngine private constructor(val context: Context) {
         promoted = true
       } finally {
         helper?.let { current -> engine.handler.post { current.release() } }; helper = null
-        try { if (!promoted) engine.removeResources(id) } finally { source.cancel() }
+        try { if (!promoted) engine.removeResources(id) } finally {
+          try { source.cancel() } finally {
+            engine.sessions.remove(id, source)
+            if (session === source) session = null
+          }
+        }
       }
     }
 

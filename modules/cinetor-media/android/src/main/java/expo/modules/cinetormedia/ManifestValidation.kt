@@ -4,8 +4,43 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 
-/** Finite, clear presentations only. Media3 still parses and selects actual supported tracks. */
+/** Finite non-DRM HLS (including AES-128 identity keys) and clear DASH only. */
 internal object ManifestValidation {
+  private val hlsAttribute = Regex("([A-Z0-9-]+)=(\"[^\"]*\"|[^,]*)")
+
+  fun hlsEncryptionKeyUris(playlist: String): List<String> = playlist.lineSequence().map { it.trim() }
+    .filter { it.startsWith("#EXT-X-KEY:") || it.startsWith("#EXT-X-SESSION-KEY:") }
+    .mapNotNull { line ->
+      val attributes = line.substringAfter(':')
+      val values = mutableMapOf<String, String>()
+      var offset = 0
+      while (offset < attributes.length) {
+        val match = hlsAttribute.matchAt(attributes, offset)
+          ?: throw MediaFailure("invalid_key", "Invalid HLS encryption key attributes")
+        val name = match.groupValues[1]
+        val value = match.groupValues[2].removeSurrounding("\"")
+        if (values.put(name, value) != null) throw MediaFailure("invalid_key", "Duplicate HLS encryption key attribute")
+        offset = match.range.last + 1
+        if (offset < attributes.length) {
+          if (attributes[offset] != ',' || offset + 1 == attributes.length) throw MediaFailure("invalid_key", "Invalid HLS encryption key attributes")
+          offset++
+        }
+      }
+      val method = values["METHOD"]
+      val format = values["KEYFORMAT"]
+      if (method !in setOf("NONE", "AES-128") || format != null && format != "identity") {
+        throw MediaFailure("drm_unsupported", "DRM-protected media is not supported offline")
+      }
+      if (method == "NONE") null else {
+        values["URI"]?.takeIf { it.isNotEmpty() }
+          ?: throw MediaFailure("invalid_key", "An HLS AES-128 key address is missing")
+      }
+    }.toList()
+
+  fun validateAes128KeyLength(length: Long) {
+    if (length != 16L) throw MediaFailure("invalid_key", "An offline AES-128 key is not 16 bytes")
+  }
+
   fun validate(bytes: ByteArray, container: String) {
     val text = bytes.toString(Charsets.UTF_8).removePrefix("﻿").trimStart()
     if (text.contains("<!DOCTYPE", true) || text.contains("<!ENTITY", true)) throw MediaFailure("invalid_manifest", "External manifest entities are not allowed")
@@ -18,13 +53,7 @@ internal object ManifestValidation {
       if (lines.any { it.startsWith("#EXT-X-PART:") || it.startsWith("#EXT-X-PRELOAD-HINT:") || it.startsWith("#EXT-X-CONTENT-STEERING:") }) {
         throw MediaFailure("live_unsupported", "Low-latency and steered media are not supported offline")
       }
-      for (line in lines.filter { it.startsWith("#EXT-X-KEY:") || it.startsWith("#EXT-X-SESSION-KEY:") }) {
-        val method = Regex("(?:^|[:,])METHOD=([^,]+)").find(line)?.groupValues?.get(1)
-        val format = Regex("(?:^|,)KEYFORMAT=\"([^\"]+)\"").find(line)?.groupValues?.get(1)
-        if (method !in setOf("NONE", "AES-128") || format != null && format != "identity") {
-          throw MediaFailure("drm_unsupported", "DRM-protected media is not supported offline")
-        }
-      }
+      hlsEncryptionKeyUris(text)
       return
     }
     if (container != "dash") throw MediaFailure("invalid_manifest", "The server returned an invalid media manifest")

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Platform, View, type NativeSyntheticEvent, type ViewProps } from 'react-native';
-import { requireNativeViewManager } from 'expo-modules-core';
+import { requireNativeModule, requireNativeViewManager } from 'expo-modules-core';
 import type { DownloadContainer } from '../../modules/cinetor-media/src/download-client';
 
 export type PlaybackContainer = DownloadContainer | 'webm';
@@ -52,7 +52,11 @@ interface NativeProps extends Omit<OfflineVideoProps, 'onFirstFrame' | 'onTimeUp
 
 let NativeVideo: React.ComponentType<NativeProps> | undefined;
 if (Platform.OS === 'android') {
-  try { NativeVideo = requireNativeViewManager<NativeProps>('CinetorMedia'); }
+  try {
+    // The SDK's view adapter can return a wrapper even when its native module is absent.
+    requireNativeModule('CinetorMedia');
+    NativeVideo = requireNativeViewManager<NativeProps>('CinetorMedia');
+  }
   catch { /* Expo Go and unsupported targets render an explicit unavailable state, not unsafe playback. */ }
 }
 
