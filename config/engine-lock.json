@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "activation": "bundled-independently-source-reviewed-sha256-only",
+    "mutableRemoteManifests": false,
+    "rawCodeBridge": false,
+    "cloudstreamSandbox": false,
+    "historicalInventoryBundled": false,
+    "evidence": "implementation-source-only; Android compilation, instrumentation, playback and release shrinking NOT RUN locally"
+  },
+  "engines": {
+    "nuvio": {
+      "sourceRepository": "https://github.com/NuvioMedia/NuvioMobile",
+      "sourceRevision": "c114d6fb69fbed2bbed1f728bce7d752b5a19158",
+      "license": "GPL-3.0-only",
+      "profile": "nuvio-mobile-quickjs-1.0.15",
+      "adaptedFiles": ["PluginRuntime.kt", "js/JsBindings.kt", "host/HostFunctions.kt", "network/FetchBridge.kt", "network/UrlBridge.kt", "dom/DomBridge.kt", "crypto/CryptoBridge.kt"],
+      "unmodifiedJsBindingsSha256": "a60e4ec5e783b148ea7a5e007671c92e05eebffe45cfc5c45cf271772c3bcad3",
+      "tvReference": {"repository": "https://github.com/NuvioMedia/NuvioTV", "revision": "b36db80835a79c09fef3675ea327e3f412841f23", "included": false}
+    },
+    "quickjs": {
+      "coordinate": "io.github.dokar3:quickjs-kt-android:1.0.15",
+      "artifactUrl": "https://repo.maven.apache.org/maven2/io/github/dokar3/quickjs-kt-android/1.0.15/quickjs-kt-android-1.0.15.aar",
+      "sourceRepository": "https://github.com/dokar3/quickjs-kt",
+      "sourceRevision": "a081755bcdb18ee6afa7ffee25b8fa976f06d31f",
+      "sha256": "406c3efb80d5fa3495df4a7f2663be8cc30c974fe5c2368effa929de77cf0ed8",
+      "size": 1828904,
+      "license": "Apache-2.0 AND MIT",
+      "engineSubmodule": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
+      "vectorSubmodule": "774773d4cb1e66dd736e90e7f482d4f22af464c6",
+      "executionTimeoutMs": 30000,
+      "heapBytes": 33554432,
+      "stackBytes": 524288,
+      "interruptApi": "interruptEvaluation"
+    },
+    "cloudstream": {
+      "coordinate": "com.github.recloudstream.cloudstream:library-android:v4.8.0",
+      "artifactUrl": "https://jitpack.io/com/github/recloudstream/cloudstream/library-android/v4.8.0/library-android-v4.8.0.aar",
+      "sourceRepository": "https://github.com/recloudstream/cloudstream",
+      "sourceRevision": "3796406e636356f556c16e04e1da4e37d6a19038",
+      "sha256": "c15283dcf40055e4e747aeb6d8ae000dbf66d6a7566cca90e8d68f01020d3a49",
+      "size": 2025294,
+      "license": "GPL-3.0-only",
+      "profile": "cloudstream-4.8.0-androidJvm",
+      "kotlinCompiler": "2.4.10",
+      "unsupportedOlderAbi": "4.7 and earlier: provider collection getters changed to AtomicList/AtomicMutableList",
+      "dependencyClosure": {
+        "kotlin-stdlib": "2.3.21 published; aligned to host 2.4.10",
+        "kotlin-reflect": "2.3.20 published; aligned to host 2.4.10",
+        "coroutines": "1.11.0", "serialization": "1.11.0", "datetime": "0.8.0", "atomicfu": "0.33.0",
+        "NiceHttp": "0.4.18", "OkHttp": "5.3.2", "Jsoup": "1.22.1", "Jackson": "2.13.1",
+        "Ksoup": "0.2.6", "Ktor-http": "3.5.0", "Rhino": "1.8.1", "cryptography": "0.6.0",
+        "TMDB-java": "2.13.0", "fuzzywuzzy": "1.4.0", "NewPipeExtractor": "v0.26.3"
+      }
+    }
+  },
+  "plugins": [
+    {
+      "id": "cinetor-bbb-nuvio", "engine": "nuvio", "version": "1.0.0", "license": "GPL-3.0-or-later",
+      "profile": "nuvio-mobile-quickjs-1.0.15", "review": "original-source-reviewed", "enabledByDefault": false,
+      "asset": "cinetor/plugins/bbb.js", "sha256": "881ba17ce256f51f95095ca61b65e935a0be4b7cb7815882c47db18e39c66295",
+      "networkOrigins": [], "mediaOrigins": ["https://media.w3.org"], "contentKey": "tmdb:movie:810"
+    },
+    {
+      "id": "cinetor-bbb-cloudstream", "engine": "cloudstream", "version": "1", "license": "GPL-3.0-or-later",
+      "profile": "cloudstream-4.8.0-androidJvm", "review": "original-source-reviewed", "enabledByDefault": false,
+      "asset": "cinetor/plugins/bbb.cs3", "binarySha256": "generated-in-CI-from-pinned-original-source-and-embedded-in-owned-fixture.json",
+      "pluginClassName": "com.cinetor.fixture.BlenderPlugin", "requiresResources": true,
+      "networkOrigins": [], "mediaOrigins": ["https://media.w3.org"], "contentKey": "tmdb:movie:810",
+      "sourceFiles": {
+        "modules/cinetor-engines/fixtures/cloudstream/settings.gradle": "ac519d64d06513dae9d07c31dc320dcac51c21d13935069898758e184492fba3",
+        "modules/cinetor-engines/fixtures/cloudstream/build.gradle": "2e4d16806226e751fa682efa9bff52f7c9172d9785522591cf5f45d71543cdbf",
+        "modules/cinetor-engines/fixtures/cloudstream/gradle.properties": "c146c0caef13c798f1b105ba1535dc64df8b9088544b6f2367da0455f00991ca",
+        "modules/cinetor-engines/fixtures/cloudstream/src/main/AndroidManifest.xml": "79b3a07a53ef0916e9af820baeae3055fd330a3566b91bdde710ea364575d142",
+        "modules/cinetor-engines/fixtures/cloudstream/src/main/res/values/strings.xml": "73791e98617994e6538eaf0abdb9203ff7b7a1c2f5df7b1d611f3042a91664f1",
+        "modules/cinetor-engines/fixtures/cloudstream/src/main/java/com/cinetor/fixture/BlenderPlugin.kt": "a5b3d591b7f2fef727cba1f0ebed2f808f19764a66546c1a188dc069917e4b4c"
+      }
+    }
+  ],
+  "mediaFixture": {
+    "title": "Big Buck Bunny", "year": 2008, "tmdbId": "810", "mediaType": "movie",
+    "url": "https://media.w3.org/2010/05/bunny/movie.mp4",
+    "creator": "Blender Foundation", "license": "CC-BY-3.0", "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attributionUrl": "https://peach.blender.org/about/",
+    "headObservation": {"date": "2026-10-24", "status": 200, "contentType": "video/mp4", "contentLength": 249224577, "acceptRanges": "bytes", "etag": "edadd81-4867d5d962e80"},
+    "playbackVerified": false, "bytesSha256": null
+  },
+  "correspondingSources": [
+    {"id": "nuvio-mobile", "license": "GPL-3.0-only", "url": "https://codeload.github.com/NuvioMedia/NuvioMobile/tar.gz/c114d6fb69fbed2bbed1f728bce7d752b5a19158"},
+    {"id": "cloudstream", "license": "GPL-3.0-only", "url": "https://codeload.github.com/recloudstream/cloudstream/tar.gz/3796406e636356f556c16e04e1da4e37d6a19038"},
+    {"id": "quickjs-kt", "license": "Apache-2.0", "url": "https://codeload.github.com/dokar3/quickjs-kt/tar.gz/a081755bcdb18ee6afa7ffee25b8fa976f06d31f"},
+    {"id": "quickjs-bellard", "license": "MIT", "url": "https://codeload.github.com/bellard/quickjs/tar.gz/04be246001599f5995fa2f2d8c91a0f198d3f34c"},
+    {"id": "c-vector", "license": "MIT", "url": "https://codeload.github.com/eteran/c-vector/tar.gz/774773d4cb1e66dd736e90e7f482d4f22af464c6"},
+    {"id": "nicehttp", "license": "GPL-3.0-only", "url": "https://codeload.github.com/Blatzar/NiceHttp/tar.gz/f1dee9dfc5b86a24c65bf8c6e8403d336341dd3e"},
+    {"id": "newpipe-extractor", "license": "GPL-3.0-only", "url": "https://codeload.github.com/TeamNewPipe/NewPipeExtractor/tar.gz/caae86c943857cc6e1a762e3488d6a14e9cf7800"}
+  ]
+}

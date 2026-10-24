@@ -1,0 +1,25 @@
+# .cs3 links directly against these binary namespaces. Never rename the ABI.
+-keep class com.cinetor.engines.CinetorEnginesModule { *; }
+-keep class com.lagradost.cloudstream3.** { *; }
+-keep class com.lagradost.api.** { *; }
+-keep class com.lagradost.nicehttp.** { *; }
+-keep class com.dokar.quickjs.** { *; }
+-keepclasseswithmembernames,includedescriptorclasses class * { native <methods>; }
+-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*,Exceptions
+# Native extensions may call these published dependency APIs reflectively.
+-keep class com.fasterxml.jackson.** { *; }
+-keep class org.jsoup.** { *; }
+-keep class com.fleeksoft.ksoup.** { *; }
+-keep class org.mozilla.javascript.** { *; }
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-keep class io.ktor.http.** { *; }
+-keep class kotlinx.serialization.** { *; }
+-keep class kotlinx.datetime.** { *; }
+-keep class dev.whyoleg.cryptography.** { *; }
+-keep class com.uwetrottmann.tmdb2.** { *; }
+-keep class me.xdrop.fuzzywuzzy.** { *; }
+-keep class org.schabi.newpipe.extractor.** { *; }
+-keep class kotlin.** { *; }
+-keep class kotlinx.coroutines.** { *; }
+-keep class kotlinx.atomicfu.** { *; }
