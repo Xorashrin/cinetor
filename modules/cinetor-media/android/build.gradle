@@ -8,6 +8,8 @@ version = '1.0.0'
 
 android {
   namespace 'expo.modules.cinetormedia'
+  // AGP 9 creates unit tests only for the selected test build type.
+  testBuildType 'release'
   defaultConfig {
     versionCode 1
     versionName '1.0.0'

@@ -86,8 +86,9 @@ class BdixFtpFixtureTest {
       finally { runCatching { passive?.close() }; runCatching { socket.close() }; clients.remove(socket) }
     }
     override fun close() {
-      server.close(); clients.toList().forEach { runCatching { it.close() } }
-      workers.shutdownNow(); acceptor.join(2000)
+      server.close(); acceptor.join(2000)
+      synchronized(clients) { clients.toList() }.forEach { runCatching { it.close() } }
+      workers.shutdownNow()
     }
   }
   private fun endpoint(fixture: Fixture): ApprovedEndpoint {
