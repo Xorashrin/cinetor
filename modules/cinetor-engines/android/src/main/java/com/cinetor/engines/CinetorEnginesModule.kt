@@ -23,7 +23,7 @@ class CinetorEnginesModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("CinetorEngines")
         AsyncFunction("capabilities") { capabilities() }
-        AsyncFunction("inventory") Coroutine { engine().inventory() }
+        AsyncFunction("inventory") Coroutine { -> engine().inventory() }
         AsyncFunction("installNuvio") Coroutine { input: Map<String, Any?> -> engine().install(input, "nuvio") }
         AsyncFunction("installCloudstream") Coroutine { input: Map<String, Any?> -> engine().install(input, "cloudstream") }
         AsyncFunction("resolveNuvio") Coroutine { input: Map<String, Any?> -> engine().run(input) { engine().nuvio.resolve(input, it) } }

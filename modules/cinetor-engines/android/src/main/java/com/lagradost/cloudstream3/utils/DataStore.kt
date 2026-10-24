@@ -28,6 +28,7 @@ data class Editor(val editor: SharedPreferences.Editor) {
     fun apply() { editor.apply() }
 }
 
+@OptIn(com.lagradost.cloudstream3.InternalAPI::class)
 object DataStore {
     val mapper = com.lagradost.cloudstream3.mapper
     fun Context.getSharedPrefs(): SharedPreferences = getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)

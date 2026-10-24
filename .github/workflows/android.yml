@@ -79,7 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./android/gradlew -p android :cinetor-engines:assembleRelease -Pcinetor.fixtureBootstrap=true --no-daemon 2>&1 | tee artifacts/checks/native-host.log
+          ./android/gradlew -p android :cinetor-engines:assembleRelease :cinetor-bdix:compileDebugKotlin :cinetor-media:compileReleaseKotlin -Pcinetor.fixtureBootstrap=true --continue --no-daemon 2>&1 | tee artifacts/checks/native-host.log
           python3 -I tools/fetch_engine_sources.py --prepare-fixture --host-aar modules/cinetor-engines/android/build/outputs/aar/cinetor-engines-release.aar
           ./android/gradlew -p modules/cinetor-engines/fixtures/cloudstream assembleRelease --no-daemon 2>&1 | tee artifacts/checks/cloudstream-fixture.log
           python3 -I tools/fetch_engine_sources.py --package-fixture --fixture-apk modules/cinetor-engines/fixtures/cloudstream/build/outputs/apk/release/cloudstream-release-unsigned.apk
