@@ -26,7 +26,7 @@ Review found and corrected a standalone Cloudstream fixture JVM-target mismatch 
 - Broad third-party extension coverage, real BDIX endpoint playback, physical ARM-device playback, and performance benchmarks: **not established**.
 - Only two reviewed fixture IDs are admitted. A historical manifest count or successful HTTP response is not decoded playback proof.
 
-The requested delivery stops after one source push. The workflow may run in GitHub Actions, but this session does not automatically monitor or retry it. A passing workflow uploads a commit-bound Actions APK/source artifact; no public GitHub Release is created automatically.
+The initial delivery stopped after one source push. The user then reported the failed workflow and requested a corrected cloud-built release APK. Run `40100551613` failed because Android SDK setup requested the unavailable legacy `tools` package. Subsequent cloud runs exposed React Native 0.88 type errors, undefined optional probe headers, and outdated Expo patch dependencies. The type and header fixes passed typechecking, 92 TypeScript tests, and four Python signer tests in run `40102504186`; that run stopped at the Expo compatibility gate before native compilation. Expo patch dependency resolution was performed only in Actions, and its lockfile was reviewed before integration. A passing release workflow uploads a commit-bound Actions APK/source artifact; no public GitHub Release is created automatically.
 
 ## Historical evidence
 

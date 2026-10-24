@@ -4,7 +4,7 @@
 
 The 2.0.0 integration has been inspected at the source level. No local dependency installation, typecheck, tests, bundle, Gradle/JVM process, emulator, or app execution was run for this task. All such checks belong to GitHub Actions. Do not substitute older v1.1.1 results for current evidence.
 
-The requested handoff stops after one source push. CI failures will be handled only when reported or separately requested; the development session does not automatically watch or retry CI.
+The initial handoff stopped after one source push. After the user reported the SDK setup failure, they requested a corrected release APK through Actions. Follow-up verification therefore runs in the cloud; no local execution restriction has changed.
 
 ## Cloud workflow
 
@@ -16,7 +16,7 @@ The requested handoff stops after one source push. CI failures will be handled o
 4. Native engine bootstrap AAR, compiled original Cloudstream fixture, source-pin validation, DEX/resource packaging, and generated artifact pin.
 5. BDIX JUnit tests for policy, HTTP, FTP, and FTPS; Media3 policy tests. `verify_native_tests.py` requires every named class, actual nonzero test cases, and no failed or skipped tests.
 6. Universal release APK for armeabi-v7a, arm64-v8a, and x86_64. Release minification/resource shrinking remain disabled because the previous baseline had a minified startup failure.
-7. APK signature, package/version/code, embedded bundle, ABI, and nondebuggable-manifest inspection. The signer fingerprint must match the recorded v1.1.1 certificate in `config/android-signing.json`. Signing remains the Android debug certificate, not private distribution signing.
+7. APK signature, package/version/code, Android SDK requirements, embedded bundle, native library parity across all three ABIs, ELF architecture, and nondebuggable-manifest inspection. Directory presence alone is insufficient: every packaged native library must have all three architecture variants. This static gate does not establish physical-device or 16 KiB page-size behavior. The signer fingerprint must match the recorded v1.1.1 certificate in `config/android-signing.json`. Signing remains the Android debug certificate, not private distribution signing.
 8. Real native Nuvio/Cloudstream instrumentation on Android API 35, with nonempty XML evidence. The owned fixture tests exercise QuickJS, cancellation, DEX/resources, exact opaque data, settings, and admission boundaries without pretending to establish broad provider coverage.
 9. Android 15 startup smoke on the exact signed APK. It requires rendered navigation and a live application process; it explicitly does not test playback.
 10. Corresponding engine source, exact application Git source, generated fixture provenance, notices, and checksums packaged with the passing commit-bound Actions artifact.
