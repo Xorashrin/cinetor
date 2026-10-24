@@ -31,7 +31,9 @@ The initial delivery stopped after one source push. The user then reported the f
 
 The native DNS repair and literal-address policy regressions passed in run `40113406031`. The FTP fixture now snapshots client cleanup under its lock, and Media3 selects the release unit-test variant explicitly for AGP 9. Cloud stages isolate host assembly, fixture packaging, instrumentation compilation, BDIX tests, and media tests. Independent native tests can report failures in the same run, while APK assembly still requires every preceding gate to pass.
 
-The next correction raises compile SDK to 37 for the published Expo AAR requirements without changing target SDK 36, minimum API 26, package identity, or signing. It also strengthens the cross-thread QuickJS interruption test: JavaScript must signal entry, manual interruption must produce the expected exception within three seconds, and the independent evaluation deadline cannot supply a false pass. These latest corrections require their own cloud evidence.
+Run `40116124266` confirmed that the official SDK repository does not supply `platforms;android-37`. The corrected configuration retains compile/target SDK 36 and minimum API 26, and uses Expo's supported Android `buildFromSource` autolinking option for the same lockfile-pinned modules. It does not rewrite AAR metadata or disable compatibility checks. Package identity and signing remain unchanged.
+
+The cross-thread QuickJS interruption test now requires JavaScript to signal entry and manual interruption to produce the expected exception within three seconds. The independent evaluation deadline cannot supply a false pass. Source-mode compilation and the strengthened instrumentation still require their own cloud evidence.
 
 ## Historical evidence
 
