@@ -118,7 +118,8 @@ export class NativeStreamResolver {
   }
   async probe(input: string, requestHeaders: Record<string, string>, label: string, signal?: AbortSignal, depth = 0): Promise<PlaybackSourceRef> {
     const url = publicUrl(input);
-    const headers = { 'User-Agent': requestHeaders['User-Agent'] ?? requestHeaders['user-agent'] ?? USER_AGENT, origin: requestHeaders.origin, referer: requestHeaders.referer };
+    const headers: Record<string, string> = { 'User-Agent': requestHeaders['User-Agent'] ?? requestHeaders['user-agent'] ?? USER_AGENT };
+    for (const key of ['origin', 'referer']) if (requestHeaders[key] !== undefined) headers[key] = requestHeaders[key];
     const path = new URL(url).pathname.toLowerCase();
     if (path.endsWith('.mp4')) {
       const result = await this.http.request(url, { signal, headers: { ...headers, Range: 'bytes=0-4095' }, prefix: true, maxBytes: 4096, types: ['video/mp4', 'application/octet-stream'] });
