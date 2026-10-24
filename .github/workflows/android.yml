@@ -5,6 +5,11 @@ on:
     branches: [main, feat/cinetor-three-engine-redesign]
     paths-ignore: ['docs/**', 'README.md']
   workflow_dispatch:
+    inputs:
+      refresh-lock:
+        description: Refresh the npm lockfile in the cloud without building an APK
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,7 +19,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  refresh-lock:
+    if: github.event_name == 'workflow_dispatch' && inputs.refresh-lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Resolve SDK patch versions without executing package scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - uses: actions/upload-artifact@v5
+        with:
+          name: cinetor-refreshed-lock-${{ github.sha }}
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
   build:
+    if: github.event_name != 'workflow_dispatch' || !inputs.refresh-lock
     runs-on: ubuntu-latest
     timeout-minutes: 100
     env:
