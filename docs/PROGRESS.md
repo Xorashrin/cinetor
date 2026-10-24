@@ -22,8 +22,8 @@ Review found and corrected a standalone Cloudstream fixture JVM-target mismatch 
 
 - Local repository, source, configuration, and contract inspection: performed.
 - Typecheck, tests, dependency installation, Gradle/JVM execution, bundling, app execution, and emulator work on the development PC: **not run**, by instruction.
-- Cloud run `40113406031` at commit `b8c8bb0` passed typechecking, deterministic checks, pinned host/fixture assembly, instrumentation compilation, all 16 BDIX tests, and all eight Media3 policy tests. No native tests were skipped.
-- Full APK assembly stopped because 16 Expo AARs require compile SDK 37. Instrumentation execution, APK size/signature/startup results, and device playback: **pending cloud evidence**.
+- Cloud run `40116956454` at commit `d65f0af` passed typechecking, deterministic checks, source-mode Expo compilation, pinned host/fixture assembly, all 16 BDIX tests, all eight Media3 policy tests, universal APK assembly, and APK identity/signature inspection.
+- Native instrumentation ran 12 tests: eight passed and four failed. The failures concern Nuvio promise results and typed ZIP rejection. Signed-APK startup and final release artifact publication did not run. The assembled APK is not a delivered release candidate.
 - Broad third-party extension coverage, real BDIX endpoint playback, physical ARM-device playback, and performance benchmarks: **not established**.
 - Only two reviewed fixture IDs are admitted. A historical manifest count or successful HTTP response is not decoded playback proof.
 
@@ -33,7 +33,15 @@ The native DNS repair and literal-address policy regressions passed in run `4011
 
 Run `40116124266` confirmed that the official SDK repository does not supply `platforms;android-37`. The corrected configuration retains compile/target SDK 36 and minimum API 26, and uses Expo's supported Android `buildFromSource` autolinking option for the same lockfile-pinned modules. It does not rewrite AAR metadata or disable compatibility checks. Package identity and signing remain unchanged.
 
-The cross-thread QuickJS interruption test now requires JavaScript to signal entry and manual interruption to produce the expected exception within three seconds. The independent evaluation deadline cannot supply a false pass. Source-mode compilation and the strengthened instrumentation still require their own cloud evidence.
+The cross-thread QuickJS interruption test now requires JavaScript to signal entry and manual interruption to produce the expected exception within three seconds. The independent evaluation deadline cannot supply a false pass. This test and source-mode compilation passed in run `40116956454`.
+
+## October 25, 2026: Native runtime verification repairs
+
+Run `40116956454` produced a 98,726,322-byte APK for `com.cinator.app` version 2.0.0/code 7, with ARMv7, ARM64, and x86_64 native libraries. Its certificate matches the historical update certificate. The job nevertheless failed native instrumentation and did not publish a passing release candidate.
+
+Nuvio stream and settings invocations now explicitly await their QuickJS promise before converting the result to JSON. Existing native cancellation, request deadlines, byte limits, and pinned binding sources remain unchanged. Device regression coverage now includes synchronous/asynchronous settings, rejected promises, and never-settled settings promises, alongside the existing stream and cancellation cases.
+
+Android 14+ ZIP path validation can throw `ZipException` before Cinetor's entry checks run. Archive validation now converts that exception into the existing `ARCHIVE` engine failure without disabling platform validation or changing admission rules. Tests retain resource/ABI/traversal rejection, require exact error codes, and add absolute-path and malformed-ZIP cases. These corrections require a new cloud run; no local tests or app execution were performed.
 
 ## Historical evidence
 

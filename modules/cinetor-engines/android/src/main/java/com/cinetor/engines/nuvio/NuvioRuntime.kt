@@ -155,7 +155,9 @@ internal class NuvioRuntime(private val store: PluginStore, private val settings
             // Nuvio's CommonJS wrapper lives exclusively inside QuickJS, never the RN realm.
             runtime.evaluate<Any?>("var module = {exports:{}}; var exports=module.exports;\n(function(){\n$code\n})();", "$id.js")
             control.check()
-            val result = runtime.evaluate<String>(if (layout) JsBindings.staticSettingsCallCode else JsBindings.staticCallCode, "cinetor-call.js")
+            val callCode = if (layout) JsBindings.staticSettingsCallCode else JsBindings.staticCallCode
+            // QuickJS returns the promise object unless the call explicitly awaits its value.
+            val result = runtime.evaluate<String>("await $callCode", "cinetor-call.js")
             requireEngine(result.toByteArray(Charsets.UTF_8).size <= Limits.JSON, "LIMIT", "Plugin result exceeds the byte budget")
             nativeFailure.get()?.let { throw it }
             control.check()

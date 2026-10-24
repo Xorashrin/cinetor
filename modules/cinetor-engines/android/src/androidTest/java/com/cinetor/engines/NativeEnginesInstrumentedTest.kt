@@ -32,12 +32,12 @@ class NativeEnginesInstrumentedTest {
     @Before fun start() { host = EngineHost(context) }
     @After fun stop() = runBlocking { host.requests.close(); host.cloudstream.unloadAll(); host.cloudstream.close() }
 
-    private suspend fun evaluate(code: String, budget: Int = 5000): Map<String, Any?> {
+    private suspend fun evaluate(code: String, budget: Int = 5000, layout: Boolean = false): Map<String, Any?> {
         val input = request("deadlineMs" to budget)
         val runtime = NuvioRuntime(host.store, host.settings, HttpBroker())
         return host.run(input) { control ->
             result(input, "value", runtime.evaluate(code, "owned-test", "{}",
-                "{\"tmdbId\":\"810\",\"mediaType\":\"movie\"}", emptySet(), control))
+                "{\"tmdbId\":\"810\",\"mediaType\":\"movie\"}", emptySet(), control, layout))
         }
     }
 
@@ -50,6 +50,18 @@ class NativeEnginesInstrumentedTest {
         assertEquals("error", evaluate("module.exports.getStreams = () => ({url:'bad'});")["status"])
         assertEquals("unsupported", evaluate("module.exports = {};")["status"])
         assertEquals("unsupported", evaluate("module.exports.getStreams = async () => { await WebAssembly.instantiate([]); return []; };")["status"])
+        assertEquals("error", evaluate("module.exports.getStreams = () => Promise.reject(new Error('owned rejection'));")["status"])
+    }
+
+    @Test fun settingsCallsAwaitSyncAndAsyncResults() = runBlocking {
+        assertEquals("[]", evaluate("module.exports = {};", layout = true)["value"])
+        assertEquals("[]", evaluate("module.exports.onSettings = () => [];", layout = true)["value"])
+        val promised = evaluate("module.exports.onSettings = async () => { await new Promise(r => setTimeout(r,1)); return [{id:'enabled',type:'boolean'}]; };", layout = true)
+        assertEquals("ok", promised["status"])
+        assertEquals("enabled", Json.parse(promised["value"] as String).single()["id"].asText())
+        assertEquals("error", evaluate("module.exports.onSettings = () => Promise.reject(new Error('owned rejection'));", layout = true)["status"])
+        assertEquals("error", evaluate("module.exports.onSettings = () => ({});", layout = true)["status"])
+        assertEquals("timeout", evaluate("module.exports.onSettings = () => new Promise(() => {});", 150, layout = true)["status"])
     }
 
     @Test fun nativeInterruptStopsBusyJavaScript() = runBlocking {
@@ -104,6 +116,9 @@ class NativeEnginesInstrumentedTest {
         assertEquals("ok", success["status"])
         assertEquals("tmdb:movie:810", success["contentKey"])
         assertEquals(1, (success["sources"] as List<*>).size)
+        val layout = host.run(input) { host.nuvio.settingsLayout(input, it) }
+        assertEquals("ok", layout["status"])
+        assertEquals("enabled", ((layout["layout"] as List<*>).single() as Map<*, *>)["id"])
         val wrong = input + mapOf("requestId" to UUID.randomUUID().toString(), "tmdbId" to "811")
         assertEquals("empty", host.run(wrong) { host.nuvio.resolve(wrong, it) }["status"])
         val tv = input + mapOf("requestId" to UUID.randomUUID().toString(), "mediaType" to "tv", "season" to 0, "episode" to 1)
@@ -176,7 +191,8 @@ class NativeEnginesInstrumentedTest {
         val good = File(dir, "good.cs3").apply { writeBytes(original) }
         try {
             host.store.validateArchive(good, entry)
-            for (mode in listOf("resources", "abi", "traversal")) {
+            for ((mode, expectedCode) in mapOf("resources" to "UNSUPPORTED_RESOURCES", "abi" to "UNSUPPORTED_ABI",
+                "traversal" to "ARCHIVE", "absolute" to "ARCHIVE")) {
                 val broken = File(dir, "$mode.cs3")
                 ZipFile(good).use { source -> ZipOutputStream(broken.outputStream()).use { target ->
                     source.entries().asSequence().forEach { item ->
@@ -186,11 +202,19 @@ class NativeEnginesInstrumentedTest {
                         if (mode == "abi" && item.name == "manifest.json") data = data.toString(Charsets.UTF_8).replace("com.cinetor.fixture.BlenderPlugin", "unsupported.OlderPlugin").toByteArray()
                         target.write(data); target.closeEntry()
                     }
-                    if (mode == "traversal") { target.putNextEntry(ZipEntry("../escape")); target.write(byteArrayOf(1)); target.closeEntry() }
+                    if (mode == "traversal" || mode == "absolute") {
+                        target.putNextEntry(ZipEntry(if (mode == "traversal") "../escape" else "/escape"))
+                        target.write(byteArrayOf(1)); target.closeEntry()
+                    }
                 } }
                 val failure = runCatching { host.store.validateArchive(broken, entry) }.exceptionOrNull()
-                assertTrue("$mode must fail", failure is EngineFailure)
+                assertTrue("$mode must fail with EngineFailure, got ${failure?.javaClass?.name}", failure is EngineFailure)
+                assertEquals(mode, expectedCode, (failure as EngineFailure).code)
             }
+            val malformed = File(dir, "malformed.cs3").apply { writeText("This is not a ZIP archive.") }
+            val failure = runCatching { host.store.validateArchive(malformed, entry) }.exceptionOrNull()
+            assertTrue("Malformed ZIP must fail with EngineFailure, got ${failure?.javaClass?.name}", failure is EngineFailure)
+            assertEquals("ARCHIVE", (failure as EngineFailure).code)
         } finally { dir.deleteRecursively() }
     }
 

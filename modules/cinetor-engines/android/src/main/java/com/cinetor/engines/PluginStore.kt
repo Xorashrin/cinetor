@@ -6,6 +6,7 @@ import android.system.Os
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import java.util.zip.ZipException
 import java.util.zip.ZipFile
 
 internal data class ReviewedPlugin(
@@ -104,28 +105,33 @@ internal class PluginStore(private val context: Context) {
         var dex = false
         var resources = false
         val names = HashSet<String>()
-        ZipFile(file).use { zip ->
-            val iterator = zip.entries()
-            while (iterator.hasMoreElements()) {
-                val item = iterator.nextElement()
-                val name = item.name
-                requireEngine(names.size < 512 && name.length <= 256 && !name.startsWith("/") &&
-                    !name.contains('\\') && name.split('/').none { it == ".." || it == "." } &&
-                    names.add(name), "ARCHIVE", "Unsafe or duplicate archive entry")
-                requireEngine(!name.endsWith(".so") && !name.startsWith("lib/"),
-                    "UNSUPPORTED_NATIVE_PLUGIN", "Native-library plugins are not admitted")
-                if (item.isDirectory) continue
-                val bytes = zip.getInputStream(item).use { it.readBounded(Limits.UNPACKED) }
-                total += bytes.size
-                requireEngine(total <= Limits.UNPACKED && item.size == bytes.size.toLong(),
-                    "ARCHIVE", "Archive size limit or entry length mismatch")
-                if (name == "manifest.json") {
-                    requireEngine(bytes.size <= 8192, "ARCHIVE", "Plugin manifest is too large")
-                    manifest = bytes.toString(Charsets.UTF_8)
+        try {
+            ZipFile(file).use { zip ->
+                val iterator = zip.entries()
+                while (iterator.hasMoreElements()) {
+                    val item = iterator.nextElement()
+                    val name = item.name
+                    requireEngine(names.size < 512 && name.length <= 256 && !name.startsWith("/") &&
+                        !name.contains('\\') && name.split('/').none { it == ".." || it == "." } &&
+                        names.add(name), "ARCHIVE", "Unsafe or duplicate archive entry")
+                    requireEngine(!name.endsWith(".so") && !name.startsWith("lib/"),
+                        "UNSUPPORTED_NATIVE_PLUGIN", "Native-library plugins are not admitted")
+                    if (item.isDirectory) continue
+                    val bytes = zip.getInputStream(item).use { it.readBounded(Limits.UNPACKED) }
+                    total += bytes.size
+                    requireEngine(total <= Limits.UNPACKED && item.size == bytes.size.toLong(),
+                        "ARCHIVE", "Archive size limit or entry length mismatch")
+                    if (name == "manifest.json") {
+                        requireEngine(bytes.size <= 8192, "ARCHIVE", "Plugin manifest is too large")
+                        manifest = bytes.toString(Charsets.UTF_8)
+                    }
+                    if (name == "classes.dex") dex = bytes.size > 8 && bytes.copyOfRange(0, 4).contentEquals(byteArrayOf(100, 101, 120, 10))
+                    if (name == "resources.arsc") resources = bytes.isNotEmpty()
                 }
-                if (name == "classes.dex") dex = bytes.size > 8 && bytes.copyOfRange(0, 4).contentEquals(byteArrayOf(100, 101, 120, 10))
-                if (name == "resources.arsc") resources = bytes.isNotEmpty()
             }
+        } catch (error: ZipException) {
+            // Android 14+ can reject unsafe entry paths before the explicit checks above run.
+            throw EngineFailure("ARCHIVE", "Invalid or unsafe plugin archive").apply { initCause(error) }
         }
         val parsed = Json.parse(manifest ?: throw EngineFailure("ARCHIVE", "Embedded manifest.json is required"), 8192)
         requireEngine(parsed.isObject && dex && parsed.string("pluginClassName") == entry.pluginClass &&

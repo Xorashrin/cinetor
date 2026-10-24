@@ -6,6 +6,8 @@ The 2.0.0 integration has been inspected at the source level. No local dependenc
 
 The initial handoff stopped after one source push. After the user reported the SDK setup failure, they requested a corrected release APK through Actions. Follow-up verification therefore runs in the cloud; no local execution restriction has changed.
 
+Run `40116956454` at commit `d65f0af` assembled and inspected the signed universal APK after all 16 BDIX and eight media unit tests passed. Eight of 12 native engine instrumentation tests passed, including manual interruption and real Cloudstream DEX/resource loading. Four failed on promise-result handling and archive error typing. Startup smoke and the final release artifact remained blocked. Follow-up source fixes and expanded settings/archive regressions require a new passing cloud run.
+
 ## Cloud workflow
 
 `.github/workflows/android.yml` runs on `main`, `feat/cinetor-three-engine-redesign`, and manual dispatch. Its gates are:
