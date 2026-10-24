@@ -22,14 +22,16 @@ Review found and corrected a standalone Cloudstream fixture JVM-target mismatch 
 
 - Local repository, source, configuration, and contract inspection: performed.
 - Typecheck, tests, dependency installation, Gradle/JVM execution, bundling, app execution, and emulator work on the development PC: **not run**, by instruction.
-- Pinned engine artifacts, native engine host assembly, and BDIX Kotlin compilation passed in cloud run `40107228994` at commit `86b0cd6`. Media3 compilation stopped at three invalid Kotlin `Dns` interface constructors.
-- Full APK assembly, compiled-fixture execution, native test reports, APK size/signature/startup results, and device playback: **pending cloud evidence**.
+- Cloud run `40113406031` at commit `b8c8bb0` passed typechecking, deterministic checks, pinned host/fixture assembly, instrumentation compilation, all 16 BDIX tests, and all eight Media3 policy tests. No native tests were skipped.
+- Full APK assembly stopped because 16 Expo AARs require compile SDK 37. Instrumentation execution, APK size/signature/startup results, and device playback: **pending cloud evidence**.
 - Broad third-party extension coverage, real BDIX endpoint playback, physical ARM-device playback, and performance benchmarks: **not established**.
 - Only two reviewed fixture IDs are admitted. A historical manifest count or successful HTTP response is not decoded playback proof.
 
 The initial delivery stopped after one source push. The user then reported the failed workflow and requested a corrected cloud-built release APK. Run `40100551613` failed because Android SDK setup requested the unavailable legacy `tools` package. Subsequent cloud runs exposed React Native 0.88 type errors, undefined optional probe headers, and outdated Expo patch dependencies. The type and header fixes passed typechecking, 92 TypeScript tests, and four Python signer tests in run `40102504186`; that run stopped at the Expo compatibility gate before native compilation. Expo patch dependency resolution was performed only in Actions, and its lockfile was reviewed before integration. A passing release workflow uploads a commit-bound Actions APK/source artifact; no public GitHub Release is created automatically.
 
-The follow-up native repair replaces the three `Dns` constructor lambdas with explicit interface implementations and adds literal-address DNS policy regression coverage without public network traffic. Cloud stages now isolate host assembly, fixture packaging, instrumentation compilation, BDIX tests, and media tests. Independent native tests can report failures in the same run, while APK assembly still requires every preceding gate to pass. These latest corrections remain unverified until their own cloud run completes.
+The native DNS repair and literal-address policy regressions passed in run `40113406031`. The FTP fixture now snapshots client cleanup under its lock, and Media3 selects the release unit-test variant explicitly for AGP 9. Cloud stages isolate host assembly, fixture packaging, instrumentation compilation, BDIX tests, and media tests. Independent native tests can report failures in the same run, while APK assembly still requires every preceding gate to pass.
+
+The next correction raises compile SDK to 37 for the published Expo AAR requirements without changing target SDK 36, minimum API 26, package identity, or signing. It also strengthens the cross-thread QuickJS interruption test: JavaScript must signal entry, manual interruption must produce the expected exception within three seconds, and the independent evaluation deadline cannot supply a false pass. These latest corrections require their own cloud evidence.
 
 ## Historical evidence
 

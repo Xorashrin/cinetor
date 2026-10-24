@@ -5,6 +5,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.cinetor.engines.nuvio.NuvioRuntime
 import com.dokar.quickjs.QuickJs
+import com.dokar.quickjs.QuickJsInterruptedException
+import com.dokar.quickjs.binding.function
 import kotlinx.coroutines.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -61,15 +63,22 @@ class NativeEnginesInstrumentedTest {
         try {
             runtime.memoryLimit = 8L * 1024 * 1024
             runtime.maxStackSize = 256L * 1024
-            runtime.evaluationTimeoutMillis = 2000
+            runtime.evaluationTimeoutMillis = 10000
+            runtime.function("started") { entered.complete(Unit) }
             val worker = async(Dispatchers.IO) {
-                entered.complete(Unit)
-                runCatching { runtime.evaluate<Any?>("while(true){}") }.exceptionOrNull()
+                runCatching { runtime.evaluate<Any?>("started(); while(true){}") }.exceptionOrNull()
             }
-            entered.await()
-            delay(50)
-            runtime.interruptEvaluation()
-            assertNotNull(withTimeout(3000) { worker.await() })
+            try {
+                withTimeout(3000) {
+                    entered.await()
+                    runtime.interruptEvaluation()
+                    assertTrue(worker.await() is QuickJsInterruptedException)
+                }
+                assertEquals(2, runtime.evaluate<Int>("1 + 1"))
+            } finally {
+                runtime.interruptEvaluation()
+                withContext(NonCancellable) { worker.join() }
+            }
         } finally { runtime.close() }
     }
 

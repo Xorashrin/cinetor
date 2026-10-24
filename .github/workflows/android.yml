@@ -57,7 +57,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install pinned Android SDK components
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+        run: sdkmanager 'platforms;android-36' 'platforms;android-37' 'build-tools;36.0.0' 'platform-tools'
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Generate original Cinetor assets
@@ -91,6 +91,11 @@ jobs:
           python3 -I tools/fetch_engine_sources.py --prepare-fixture --host-aar modules/cinetor-engines/android/build/outputs/aar/cinetor-engines-release.aar
           ./android/gradlew -p modules/cinetor-engines/fixtures/cloudstream assembleRelease --no-daemon 2>&1 | tee artifacts/checks/cloudstream-fixture.log
           python3 -I tools/fetch_engine_sources.py --package-fixture --fixture-apk modules/cinetor-engines/fixtures/cloudstream/build/outputs/apk/release/cloudstream-release-unsigned.apk
+      - name: Validate app and Expo dependency metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./android/gradlew -p android :app:checkReleaseAarMetadata :expo:checkReleaseAarMetadata --continue --no-daemon 2>&1 | tee artifacts/checks/android-dependency-metadata.log
       - name: Compile native engine instrumentation before the app
         shell: bash
         run: |

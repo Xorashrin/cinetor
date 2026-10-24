@@ -12,7 +12,7 @@ The initial handoff stopped after one source push. After the user reported the S
 
 1. Locked npm install and original asset generation.
 2. TypeScript checking, deterministic TypeScript tests, Python release-tool regressions, Expo dependency compatibility, and Expo Doctor.
-3. Secure Expo Android prebuild with API 26 minimum, platform/target 36, build-tools 36.0.0, JDK 17, Kotlin 2.4.10, JitPack, and AGP 9 compatibility settings.
+3. Secure Expo Android prebuild with API 26 minimum, compile SDK 37, target SDK 36, build-tools 36.0.0, JDK 17, Kotlin 2.4.10, JitPack, and AGP 9 compatibility settings. App and Expo AAR metadata are checked before full APK assembly.
 4. Native engine bootstrap AAR, compiled original Cloudstream fixture, source-pin validation, DEX/resource packaging, and generated artifact pin.
 5. BDIX JUnit tests for policy, HTTP, FTP, and FTPS; Media3 policy tests. `verify_native_tests.py` requires every named class, actual nonzero test cases, and no failed or skipped tests.
 6. Universal release APK for armeabi-v7a, arm64-v8a, and x86_64. Release minification/resource shrinking remain disabled because the previous baseline had a minified startup failure.
