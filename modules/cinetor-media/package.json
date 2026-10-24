@@ -1,0 +1,7 @@
+{
+  "name": "cinetor-media",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Private persistent Android offline media and origin-confined playback",
+  "main": "src/download-client.ts"
+}
